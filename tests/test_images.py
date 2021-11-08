@@ -9,12 +9,13 @@ def test_init():
     d = disk.Disk(DISK_SIZE, DISK_NAME)
     assert d.size == DISK_SIZE
     assert d.name == DISK_NAME
+    assert d.sector_size == 512
 
 
 def test_create():
     d = disk.Disk(DISK_SIZE, DISK_NAME)
     d.create()
-    assert len(d.disk.getvalue()) == DISK_SIZE
+    assert len(d.buffer.getvalue()) == DISK_SIZE
 
 
 def test_write(tmp_path):
