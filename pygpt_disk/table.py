@@ -18,12 +18,17 @@ from pygpt_disk.disk import Disk
 
 class Table:
     _header_sig = b"\x45\x46\x49\x20\x50\x41\x52\x54"
+    _revision = b"\x00\x00\x01\x00"
 
-    def __init__(self, disk: Disk):
+    def __init__(self, disk: Disk) -> None:
         self.disk = disk
 
-    def create(self):
+    def create(self) -> None:
         """Create blank GPT Table Header"""
         # move to LBA 1
-        self.disk.buffer.seek(self.disk.sector_size - 1)
+        self.disk.buffer.seek(self.disk.sector_size)
         self.disk.buffer.write(Table._header_sig)
+        self.disk.buffer.write(Table._revision)
+        self.disk.buffer.seek(self.disk.size - 1)
+        # move to the end of the buffer and write to avoid truncating the stream
+        self.disk.buffer.write(b"\0")

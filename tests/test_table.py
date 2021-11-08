@@ -11,5 +11,7 @@ def fresh_disk(tmp_path):
 def test_init(fresh_disk: disk.Disk):
     t = table.Table(fresh_disk)
     t.create()
-    t.disk.buffer.seek(512 - 1)
+    t.disk.buffer.seek(fresh_disk.sector_size)
     assert t.disk.buffer.read(8) == b"EFI PART"
+    assert t.disk.buffer.read(4) == b"\x00\x00\x01\x00"
+    fresh_disk.write()
