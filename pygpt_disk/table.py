@@ -14,14 +14,24 @@ Byte 32 - 39 Backup LBA location
 LBA 2 - 33 partitions
 """
 from pygpt_disk.disk import Disk
+import struct
 
 
 class Table:
-    _header_sig = b"\x45\x46\x49\x20\x50\x41\x52\x54"
-    _revision = b"\x00\x00\x01\x00"
+    _header_sig = b"\x45\x46\x49\x20\x50\x41\x52\x54"  # "EFI PART"
+    _revision = b"\x00\x00\x01\x00"  # "1.0"
+    _header_size = b"\x5C\x00\x00\x00"  # 92 bytes
+    _header_crc = (
+        b"\x00\x00\x00\x00"  # CRC/zlib of header with this field zero'd during calc
+    )
+    _reserved = b"\x00\x00\x00\x00"  # reserved (all zeros)
 
     def __init__(self, disk: Disk) -> None:
         self.disk = disk
+        self._primary_header_lba = int(self.disk.sector_size / self.disk.sector_size)
+        self._backup_header_lba = int(
+            (self.disk.size - self.disk.sector_size) / self.disk.sector_size
+        )
 
     def create(self) -> None:
         """Create blank GPT Table Header"""
@@ -29,6 +39,16 @@ class Table:
         self.disk.buffer.seek(self.disk.sector_size)
         self.disk.buffer.write(Table._header_sig)
         self.disk.buffer.write(Table._revision)
+        self.disk.buffer.write(Table._header_size)
+        self.disk.buffer.write(Table._header_crc)
+        self.disk.buffer.write(Table._reserved)
+        # use struct.pack with implicit native byte order and long type to
+        # align data on 8 byte boundaries
+        self.disk.buffer.write(struct.pack("l", self._primary_header_lba))
+        self.disk.buffer.write(struct.pack("l", self._backup_header_lba))
         self.disk.buffer.seek(self.disk.size - 1)
         # move to the end of the buffer and write to avoid truncating the stream
         self.disk.buffer.write(b"\0")
+
+    def checksum_header(self) -> None:
+        pass

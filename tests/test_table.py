@@ -14,4 +14,7 @@ def test_init(fresh_disk: disk.Disk):
     t.disk.buffer.seek(fresh_disk.sector_size)
     assert t.disk.buffer.read(8) == b"EFI PART"
     assert t.disk.buffer.read(4) == b"\x00\x00\x01\x00"
+    assert t.disk.buffer.read(4) == b"\x5C\x00\x00\x00"
+    assert t.disk.buffer.read(4) == b"\x00" * 4
+    assert t.disk.buffer.read(4) == b"\x00" * 4
     fresh_disk.write()
