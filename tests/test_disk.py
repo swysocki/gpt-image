@@ -10,6 +10,7 @@ def test_init():
     assert d.size == DISK_SIZE
     assert d.name == DISK_NAME
     assert d.sector_size == 512
+    assert d.sectors == DISK_SIZE / d.sector_size
 
 
 def test_create():

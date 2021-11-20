@@ -14,41 +14,57 @@ Byte 32 - 39 Backup LBA location
 LBA 2 - 33 partitions
 """
 from pygpt_disk.disk import Disk
-import struct
+from typing import Union
+from dataclasses import dataclass
 
 
 class Table:
-    _header_sig = b"\x45\x46\x49\x20\x50\x41\x52\x54"  # "EFI PART"
-    _revision = b"\x00\x00\x01\x00"  # "1.0"
-    _header_size = b"\x5C\x00\x00\x00"  # 92 bytes
-    _header_crc = (
-        b"\x00\x00\x00\x00"  # CRC/zlib of header with this field zero'd during calc
-    )
-    _reserved = b"\x00\x00\x00\x00"  # reserved (all zeros)
+    """GPT Partition Table Object"""
+
+    @dataclass
+    class HeaderEntry:
+        offset: int
+        length: int
+        content: Union[int, str]
+
+    _partition_entry_start_lba = int(
+        (16384 + (2 * Disk.sector_size)) / Disk.sector_size
+    )  # LBA 2 + a minimum of 16,384 bytes
 
     def __init__(self, disk: Disk) -> None:
         self.disk = disk
-        self._primary_header_lba = int(self.disk.sector_size / self.disk.sector_size)
-        self._backup_header_lba = int(
-            (self.disk.size - self.disk.sector_size) / self.disk.sector_size
-        )
 
-    def create(self) -> None:
-        """Create blank GPT Table Header"""
-        # move to LBA 1
-        self.disk.buffer.seek(self.disk.sector_size)
-        self.disk.buffer.write(Table._header_sig)
-        self.disk.buffer.write(Table._revision)
-        self.disk.buffer.write(Table._header_size)
-        self.disk.buffer.write(Table._header_crc)
-        self.disk.buffer.write(Table._reserved)
-        # use struct.pack with implicit native byte order and long type to
-        # align data on 8 byte boundaries
-        self.disk.buffer.write(struct.pack("l", self._primary_header_lba))
-        self.disk.buffer.write(struct.pack("l", self._backup_header_lba))
-        self.disk.buffer.seek(self.disk.size - 1)
+        # header fields
+        self._header_sig = Table.HeaderEntry(0, 8, b"EFI PART")
+        self._revision = Table.HeaderEntry(8, 4, b"\x00\x00\x01\x00")
+        self._header_size = Table.HeaderEntry(12, 4, 92)
+        self._header_crc = Table.HeaderEntry(16, 4, 0)
+        self._reserved = Table.HeaderEntry(20, 4, 0)
+        self._primary_header_lba = Table.HeaderEntry(24, 8, 1)
+        self._backup_header_lba = Table.HeaderEntry(32, 8, int(self.disk.sectors - 1))
+
+    def write(self, primary: bool = True) -> None:
+        """Write the table header to proper location"""
+        if primary:
+            start_byte = 1 * self.disk.sector_size
+        else:
+            start_byte = self._backup_header_lba * self.disk.sector_size
+
+        self._write_section(self._header_sig, start_byte)
+        self._write_section(self._revision, start_byte)
+        self._write_section(self._header_size, start_byte)
+        self._write_section(self._header_crc, start_byte)
+        self._write_section(self._reserved, start_byte)
+        self._write_section(self._primary_header_lba, start_byte)
+        self._write_section(self._backup_header_lba, start_byte)
         # move to the end of the buffer and write to avoid truncating the stream
+        self.disk.buffer.seek(self.disk.size - 1)
         self.disk.buffer.write(b"\0")
 
-    def checksum_header(self) -> None:
-        pass
+    def _write_section(self, entry: HeaderEntry, buffer_position: int):
+        # seek to section's offset
+        self.disk.buffer.seek(buffer_position + entry.offset)
+        if type(entry.content) != bytes:
+            self.disk.buffer.write((entry.content).to_bytes(entry.length, "little"))
+        else:
+            self.disk.buffer.write(entry.content)
