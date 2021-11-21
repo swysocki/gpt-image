@@ -1,5 +1,6 @@
 from pygpt_disk import table, disk
 import pytest
+import uuid
 
 DISK_SIZE = 8 * 1024 * 1024
 SECTOR_SIZE = 512
@@ -22,7 +23,7 @@ def test_init(fresh_disk: disk.Disk):
     assert type(t.disk) == disk.Disk
 
 
-def test_write_header(fresh_disk: disk.Disk):
+def test__write_header(fresh_disk: disk.Disk):
     t = table.Table(fresh_disk)
 
     def read_header(primary=True):
@@ -46,6 +47,18 @@ def test_write_header(fresh_disk: disk.Disk):
         assert t.disk.buffer.read(8) == (34).to_bytes(8, "little")
         # last LBA
         assert t.disk.buffer.read(8) == (LAST_LBA - 34).to_bytes(8, "little")
+        # GUID
+        disk_guid = t.disk.buffer.read(16)
+        assert type(uuid.UUID(bytes_le=disk_guid)) == uuid.UUID
+        # partition array start LBA
+        assert t.disk.buffer.read(8) == (2).to_bytes(8, "little")
+        # partition array length
+        assert t.disk.buffer.read(4) == (0).to_bytes(4, "little")
+        # partition entry length
+        assert t.disk.buffer.read(4) == (128).to_bytes(4, "little")
+        # partition array crc
+        # initially zeroed
+        assert t.disk.buffer.read(4) == (0).to_bytes(4, "little")
 
     # test primary header
     t._write_header("primary")
