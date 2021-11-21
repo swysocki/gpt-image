@@ -1,17 +1,6 @@
 """
-LBA 0 is the protective MBR
+Header information reference: https://en.wikipedia.org/wiki/GUID_Partition_Table
 
-LBA 1 is where the header starts
-
-Byte 0 - 7 (Signature) "EFI PART" or 45h 46h 49h 20h 50h 41h 52h
-Byte 8 - 11 (Revision) "1.0" or 00h 00h 01h 00h
-Byte 12 - 15 (Header size LE) 5Ch 00h 00h 00h (92 bytes)
-Byte 16 - 19 CRC32 of header from 0 to 15
-Byte 20 - 23 reserved (must be zero)
-Byte 24 - 31 Current LBA location
-Byte 32 - 39 Backup LBA location
-
-LBA 2 - 33 partition entries
 """
 from pygpt_disk.disk import Disk
 from typing import Union
@@ -44,6 +33,10 @@ class Table:
         self._partition_start_lba = Table.HeaderEntry(40, 8, 34)
         self._partition_last_lba = Table.HeaderEntry(48, 8, int(self.disk.sectors - 34))
         self._disk_guid = Table.HeaderEntry(56, 16, uuid.uuid4().bytes_le)
+        self._partition_array_start = Table.HeaderEntry(72, 8, 2)
+        self._partition_array_length = Table.HeaderEntry(80, 4, 0)
+        self._partition_entry_size = Table.HeaderEntry(84, 4, 128)
+        self._partition_array_crc = Table.HeaderEntry(88, 4, 0)
 
     def write(self) -> None:
         """Write the GPT Table
@@ -54,6 +47,7 @@ class Table:
         """
         self._write_header("primary")
         self._write_header("backup")
+        # Remainder of the header sector is zeroed
         # move to the end of the buffer and write to avoid truncating the stream
         self.disk.buffer.seek(self.disk.size - 1)
         self.disk.buffer.write(b"\0")
@@ -82,6 +76,10 @@ class Table:
         self._write_section(self._partition_start_lba, start_byte)
         self._write_section(self._partition_last_lba, start_byte)
         self._write_section(self._disk_guid, start_byte)
+        self._write_section(self._partition_array_start, start_byte)
+        self._write_section(self._partition_array_length, start_byte)
+        self._write_section(self._partition_entry_size, start_byte)
+        self._write_section(self._partition_array_crc, start_byte)
 
     def _write_section(self, entry: HeaderEntry, buffer_position: int):
         # seek to section's offset
@@ -90,3 +88,9 @@ class Table:
             self.disk.buffer.write((entry.content).to_bytes(entry.length, "little"))
         else:
             self.disk.buffer.write(entry.content)
+
+    def checksum_header():
+        pass
+
+    def update_header():
+        pass
