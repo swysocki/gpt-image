@@ -60,7 +60,9 @@ class Table:
         if header == "primary":
             start_byte = 1 * self.disk.sector_size  # LBA 1
         if header == "backup":
-            start_byte = self._secondary_header_lba * self.disk.sector_size  # LBA -1
+            start_byte = (
+                self._secondary_header_lba.content * self.disk.sector_size
+            )  # LBA -1
             # the primary/backup header locations are swapped when writing
             # to the backup header
             self._primary_header_lba.offset = 32
