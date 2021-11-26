@@ -25,6 +25,7 @@ def test_init(fresh_disk: disk.Disk):
 
 def test__write_header(fresh_disk: disk.Disk):
     t = table.Table(fresh_disk)
+    t.disk.create()
 
     def read_header(primary=True):
         assert t.disk.buffer.read(8) == SIGNATURE
@@ -51,14 +52,17 @@ def test__write_header(fresh_disk: disk.Disk):
         disk_guid = t.disk.buffer.read(16)
         assert type(uuid.UUID(bytes_le=disk_guid)) == uuid.UUID
         # partition array start LBA
-        assert t.disk.buffer.read(8) == (2).to_bytes(8, "little")
+        if primary:
+            assert t.disk.buffer.read(8) == (2).to_bytes(8, "little")
+        else:
+            assert t.disk.buffer.read(8) == (LAST_LBA - 33).to_bytes(8, "little")
         # partition array length
         assert t.disk.buffer.read(4) == (128).to_bytes(4, "little")
         # partition entry length
         assert t.disk.buffer.read(4) == (128).to_bytes(4, "little")
         # partition array crc
         # initially zeroed
-        assert t.disk.buffer.read(4) == (0).to_bytes(4, "little")
+        assert t.disk.buffer.read(4) != (0).to_bytes(4, "little")
 
     # test primary header
     t._write_header("primary")

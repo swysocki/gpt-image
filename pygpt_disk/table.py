@@ -72,6 +72,8 @@ class Table:
             # to the backup header
             self._primary_header_lba.offset = 32
             self._secondary_header_lba.offset = 24
+            # the backup header's partition array starts at LBA -33
+            self._partition_array_start.content = int(self.disk.sectors - 33)
 
         self._write_section(self._header_sig, start_byte)
         self._write_section(self._revision, start_byte)
@@ -90,6 +92,11 @@ class Table:
 
         # once the header is written the CRC is calculated
         self._checksum_header(start_byte)
+
+        # @TODO: write partition entries
+
+        # once the partitions are written the CRC is calculated
+        self._checksum_partitions(start_byte)
 
     def _write_section(self, entry: HeaderEntry, buffer_position: int):
         """Write a GPT header entry
@@ -119,6 +126,28 @@ class Table:
         raw_header = self.disk.buffer.read(self._header_size.content)
         self._header_crc.content = binascii.crc32(raw_header)
         self._write_section(self._header_crc, offset)
+
+    def _checksum_partitions(self, offset: int):
+        """Write the partition checksum
+
+        Move to the start of the partition entries.  Read the partition
+        entry array length * the partition entry size.  CRC that value.
+
+        Args:
+            offset: start bytes of the header we are writing (primary or backup)
+        """
+        # zero field before calculating
+        self._partition_array_crc.content = 0
+        self._write_section(self._partition_array_crc, offset)
+        # read partitions entries
+        self.disk.buffer.seek(
+            self._partition_array_start.content * self.disk.sector_size
+        )
+        raw_partitions = self.disk.buffer.read(
+            self._partition_array_length.content * self._partition_entry_size.content
+        )
+        self._partition_array_crc.content = binascii.crc32(raw_partitions)
+        self._write_section(self._partition_array_crc, offset)
 
 
 if __name__ == "__main__":
