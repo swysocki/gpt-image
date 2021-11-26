@@ -30,8 +30,8 @@ def test__write_header(fresh_disk: disk.Disk):
         assert t.disk.buffer.read(8) == SIGNATURE
         assert t.disk.buffer.read(4) == REVISION
         assert t.disk.buffer.read(4) == HEADER_SIZE
-        # header crc (zeroed until calculated)
-        assert t.disk.buffer.read(4) == b"\x00" * 4
+        # header crc ensure it is no longer zeroed
+        assert t.disk.buffer.read(4) != b"\x00" * 4
         # reserved
         assert t.disk.buffer.read(4) == b"\x00" * 4
         if primary:
@@ -72,17 +72,18 @@ def test__write_header(fresh_disk: disk.Disk):
 
 
 def test__checksum_header(fresh_disk: disk.Disk):
+    CRC_OFFSET = 16  # offset relative to start of header
     t = table.Table(fresh_disk)
     t._write_header("primary")
-    t._checksum_header()
+    t._checksum_header(t.primary_header_start_byte)
 
     # read new checksum
-    t.disk.buffer.seek(int(PRIMARY_LBA * SECTOR_SIZE) + 16)
+    t.disk.buffer.seek(t.primary_header_start_byte + CRC_OFFSET)
     raw_crc = t.disk.buffer.read(4)
     assert raw_crc == (t._header_crc.content).to_bytes(4, "little")
 
     t._write_header("backup")
-    t._checksum_header(False)
-    t.disk.buffer.seek(int(BACKUP_LBA * SECTOR_SIZE) + 16)
+    t._checksum_header(t.backup_header_start_byte)
+    t.disk.buffer.seek(t.backup_header_start_byte + CRC_OFFSET)
     raw_crc = t.disk.buffer.read(4)
     assert raw_crc == (t._header_crc.content).to_bytes(4, "little")

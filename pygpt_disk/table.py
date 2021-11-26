@@ -88,7 +88,16 @@ class Table:
         self._write_section(self._partition_entry_size, start_byte)
         self._write_section(self._partition_array_crc, start_byte)
 
+        # once the header is written the CRC is calculated
+        self._checksum_header(start_byte)
+
     def _write_section(self, entry: HeaderEntry, buffer_position: int):
+        """Write a GPT header entry
+
+        Args:
+            entry: HeaderEntry object
+            buffer_position: the byte offset of where the entry should be written
+        """
         # seek to section's offset
         self.disk.buffer.seek(buffer_position + entry.offset)
         if type(entry.content) != bytes:
@@ -96,19 +105,20 @@ class Table:
         else:
             self.disk.buffer.write(entry.content)
 
-    def _checksum_header(self, primary=True):
-        """Calculate the header checksum"""
-        start_byte = self.primary_header_start_byte
-        if not primary:
-            start_byte = self.backup_header_start_byte
+    def _checksum_header(self, offset: int):
+        """Calculate the header checksum
+
+        Args:
+            offset: start byte of the header we are writing (primary or backup)
+        """
         # zero field before calculating
         self._header_crc.content = 0
-        self._write_section(self._header_crc, start_byte)
+        self._write_section(self._header_crc, offset)
         # read header
-        self.disk.buffer.seek(start_byte)
+        self.disk.buffer.seek(offset)
         raw_header = self.disk.buffer.read(self._header_size.content)
         self._header_crc.content = binascii.crc32(raw_header)
-        self._write_section(self._header_crc, start_byte)
+        self._write_section(self._header_crc, offset)
 
     def update_header(self):
         pass
