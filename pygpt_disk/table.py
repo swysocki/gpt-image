@@ -52,6 +52,7 @@ class Table:
         locations
 
         """
+        self.disk.create()
         self._write_header("primary")
         self._write_header("backup")
         # Remainder of the header sector is zeroed
@@ -90,13 +91,13 @@ class Table:
         self._write_section(self._partition_entry_size, start_byte)
         self._write_section(self._partition_array_crc, start_byte)
 
-        # once the header is written the CRC is calculated
-        self._checksum_header(start_byte)
-
         # @TODO: write partition entries
 
         # once the partitions are written the CRC is calculated
         self._checksum_partitions(start_byte)
+
+        # once the header is written the CRC is calculated
+        self._checksum_header(start_byte)
 
     def _write_section(self, entry: HeaderEntry, buffer_position: int):
         """Write a GPT header entry
