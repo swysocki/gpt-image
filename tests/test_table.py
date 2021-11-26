@@ -53,7 +53,7 @@ def test__write_header(fresh_disk: disk.Disk):
         # partition array start LBA
         assert t.disk.buffer.read(8) == (2).to_bytes(8, "little")
         # partition array length
-        assert t.disk.buffer.read(4) == (0).to_bytes(4, "little")
+        assert t.disk.buffer.read(4) == (128).to_bytes(4, "little")
         # partition entry length
         assert t.disk.buffer.read(4) == (128).to_bytes(4, "little")
         # partition array crc

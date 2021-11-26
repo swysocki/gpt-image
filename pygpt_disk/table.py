@@ -36,7 +36,7 @@ class Table:
         self._partition_last_lba = Table.HeaderEntry(48, 8, int(self.disk.sectors - 34))
         self._disk_guid = Table.HeaderEntry(56, 16, uuid.uuid4().bytes_le)
         self._partition_array_start = Table.HeaderEntry(72, 8, 2)
-        self._partition_array_length = Table.HeaderEntry(80, 4, 0)
+        self._partition_array_length = Table.HeaderEntry(80, 4, 128)
         self._partition_entry_size = Table.HeaderEntry(84, 4, 128)
         self._partition_array_crc = Table.HeaderEntry(88, 4, 0)
 
@@ -120,5 +120,9 @@ class Table:
         self._header_crc.content = binascii.crc32(raw_header)
         self._write_section(self._header_crc, offset)
 
-    def update_header(self):
-        pass
+
+if __name__ == "__main__":
+    disk = Disk(8 * 1024 * 1024, "/tmp/testgpt.img")
+    t = Table(disk)
+    t.write()
+    disk.write()
