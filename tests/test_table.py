@@ -69,3 +69,20 @@ def test__write_header(fresh_disk: disk.Disk):
     t._write_header("backup")
     t.disk.buffer.seek(int(BACKUP_LBA * SECTOR_SIZE))
     read_header(False)
+
+
+def test__checksum_header(fresh_disk: disk.Disk):
+    t = table.Table(fresh_disk)
+    t._write_header("primary")
+    t._checksum_header()
+
+    # read new checksum
+    t.disk.buffer.seek(int(PRIMARY_LBA * SECTOR_SIZE) + 16)
+    raw_crc = t.disk.buffer.read(4)
+    assert raw_crc == (t._header_crc.content).to_bytes(4, "little")
+
+    t._write_header("backup")
+    t._checksum_header(False)
+    t.disk.buffer.seek(int(BACKUP_LBA * SECTOR_SIZE) + 16)
+    raw_crc = t.disk.buffer.read(4)
+    assert raw_crc == (t._header_crc.content).to_bytes(4, "little")

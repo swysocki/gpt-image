@@ -2,10 +2,12 @@
 Header information reference: https://en.wikipedia.org/wiki/GUID_Partition_Table
 
 """
-from pygpt_disk.disk import Disk
-from typing import Union
-from dataclasses import dataclass
+import binascii
 import uuid
+from dataclasses import dataclass
+from typing import Union
+
+from pygpt_disk.disk import Disk
 
 
 class Table:
@@ -15,7 +17,7 @@ class Table:
     class HeaderEntry:
         offset: int
         length: int
-        content: Union[int, str]
+        content: Union[int, str, bytes]
 
     def __init__(self, disk: Disk) -> None:
         self.disk = disk
@@ -38,6 +40,11 @@ class Table:
         self._partition_entry_size = Table.HeaderEntry(84, 4, 128)
         self._partition_array_crc = Table.HeaderEntry(88, 4, 0)
 
+        self.primary_header_start_byte = 1 * self.disk.sector_size  # LBA 1
+        self.backup_header_start_byte = int(
+            self._secondary_header_lba.content * self.disk.sector_size
+        )  # LBA -1
+
     def write(self) -> None:
         """Write the GPT Table
 
@@ -57,12 +64,10 @@ class Table:
         header_locations = ["primary", "backup"]
         if header not in header_locations:
             raise ValueError(f"Invalid header location {header}")
-        if header == "primary":
-            start_byte = 1 * self.disk.sector_size  # LBA 1
+        start_byte = self.primary_header_start_byte
+        # override offset if header is backup
         if header == "backup":
-            start_byte = (
-                self._secondary_header_lba.content * self.disk.sector_size
-            )  # LBA -1
+            start_byte = self.backup_header_start_byte
             # the primary/backup header locations are swapped when writing
             # to the backup header
             self._primary_header_lba.offset = 32
@@ -91,8 +96,19 @@ class Table:
         else:
             self.disk.buffer.write(entry.content)
 
-    def checksum_header():
-        pass
+    def _checksum_header(self, primary=True):
+        """Calculate the header checksum"""
+        start_byte = self.primary_header_start_byte
+        if not primary:
+            start_byte = self.backup_header_start_byte
+        # zero field before calculating
+        self._header_crc.content = 0
+        self._write_section(self._header_crc, start_byte)
+        # read header
+        self.disk.buffer.seek(start_byte)
+        raw_header = self.disk.buffer.read(self._header_size.content)
+        self._header_crc.content = binascii.crc32(raw_header)
+        self._write_section(self._header_crc, start_byte)
 
-    def update_header():
+    def update_header(self):
         pass
