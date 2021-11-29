@@ -15,7 +15,7 @@ BACKUP_LBA = LAST_LBA - 1
 @pytest.fixture
 def fresh_disk(tmp_path):
     image_path = tmp_path / "table-test.img"
-    return disk.Disk(DISK_SIZE, image_path)
+    return disk.Disk(image_path, DISK_SIZE)
 
 
 def test_init(fresh_disk: disk.Disk):
@@ -24,70 +24,56 @@ def test_init(fresh_disk: disk.Disk):
 
 
 def test__write_header(fresh_disk: disk.Disk):
-    t = table.Table(fresh_disk)
-    t.disk.create()
+    primary_header = table.Table(fresh_disk)
+    primary_header._write_table()
 
-    def read_header(primary=True):
-        assert t.disk.buffer.read(8) == SIGNATURE
-        assert t.disk.buffer.read(4) == REVISION
-        assert t.disk.buffer.read(4) == HEADER_SIZE
+    def read_header(header):
+        assert header.buffer.read(8) == SIGNATURE
+        assert header.buffer.read(4) == REVISION
+        assert header.buffer.read(4) == HEADER_SIZE
         # header crc ensure it is no longer zeroed
-        assert t.disk.buffer.read(4) != b"\x00" * 4
+        assert header.buffer.read(4) != b"\x00" * 4
         # reserved
-        assert t.disk.buffer.read(4) == b"\x00" * 4
-        if primary:
+        assert header.buffer.read(4) == b"\x00" * 4
+        if not header.backup:
             # primary header location LBA
-            assert t.disk.buffer.read(8) == (PRIMARY_LBA).to_bytes(8, "little")
+            assert header.buffer.read(8) == (PRIMARY_LBA).to_bytes(8, "little")
             # secondary header LBA
-            assert t.disk.buffer.read(8) == (BACKUP_LBA).to_bytes(8, "little")
-        else:
+            assert header.buffer.read(8) == (BACKUP_LBA).to_bytes(8, "little")
+        if header.backup:
             # the locations will be swapped for backup header
-            assert t.disk.buffer.read(8) == (BACKUP_LBA).to_bytes(8, "little")
-            assert t.disk.buffer.read(8) == (PRIMARY_LBA).to_bytes(8, "little")
+            assert header.buffer.read(8) == (BACKUP_LBA).to_bytes(8, "little")
+            assert header.buffer.read(8) == (PRIMARY_LBA).to_bytes(8, "little")
         # start LBA
-        assert t.disk.buffer.read(8) == (34).to_bytes(8, "little")
+        assert header.buffer.read(8) == (34).to_bytes(8, "little")
         # last LBA
-        assert t.disk.buffer.read(8) == (LAST_LBA - 34).to_bytes(8, "little")
+        assert header.buffer.read(8) == (LAST_LBA - 34).to_bytes(8, "little")
         # GUID
-        disk_guid = t.disk.buffer.read(16)
+        disk_guid = header.buffer.read(16)
         assert type(uuid.UUID(bytes_le=disk_guid)) == uuid.UUID
         # partition array start LBA
-        if primary:
-            assert t.disk.buffer.read(8) == (2).to_bytes(8, "little")
-        else:
-            assert t.disk.buffer.read(8) == (LAST_LBA - 33).to_bytes(8, "little")
+        if not header.backup:
+            assert header.buffer.read(8) == (2).to_bytes(8, "little")
+        if header.backup:
+            assert header.buffer.read(8) == (LAST_LBA - 33).to_bytes(8, "little")
         # partition array length
-        assert t.disk.buffer.read(4) == (128).to_bytes(4, "little")
+        assert header.buffer.read(4) == (128).to_bytes(4, "little")
         # partition entry length
-        assert t.disk.buffer.read(4) == (128).to_bytes(4, "little")
+        assert header.buffer.read(4) == (128).to_bytes(4, "little")
         # partition array crc
         # initially zeroed
-        assert t.disk.buffer.read(4) != (0).to_bytes(4, "little")
+        assert header.buffer.read(4) != (0).to_bytes(4, "little")
 
     # test primary header
-    t._write_header("primary")
-    t.disk.buffer.seek(fresh_disk.sector_size)
-    read_header()
+    primary_header._write_header()
+    primary_header.buffer.seek(0)
 
-    # test backup header
-    t._write_header("backup")
-    t.disk.buffer.seek(int(BACKUP_LBA * SECTOR_SIZE))
-    read_header(False)
+    read_header(primary_header)
 
-
-def test__checksum_header(fresh_disk: disk.Disk):
-    CRC_OFFSET = 16  # offset relative to start of header
-    t = table.Table(fresh_disk)
-    t._write_header("primary")
-    t._checksum_header(t.primary_header_start_byte)
-
-    # read new checksum
-    t.disk.buffer.seek(t.primary_header_start_byte + CRC_OFFSET)
-    raw_crc = t.disk.buffer.read(4)
-    assert raw_crc == (t._header_crc.content).to_bytes(4, "little")
-
-    t._write_header("backup")
-    t._checksum_header(t.backup_header_start_byte)
-    t.disk.buffer.seek(t.backup_header_start_byte + CRC_OFFSET)
-    raw_crc = t.disk.buffer.read(4)
-    assert raw_crc == (t._header_crc.content).to_bytes(4, "little")
+    backup_header = table.Table(fresh_disk, is_backup=True)
+    backup_header._write_table()
+    backup_header._write_header()
+    backup_header.buffer.seek(
+        int(32 * fresh_disk.sector_size)
+    )  # secondary header lba start
+    read_header(backup_header)
