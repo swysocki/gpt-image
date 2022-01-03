@@ -19,15 +19,16 @@ def fresh_disk(tmp_path):
 
 
 def test_init(fresh_disk: disk.Disk):
-    t = table.Table(fresh_disk)
-    assert type(t.disk) == disk.Disk
+    t = table.Table(fresh_disk.geometry)
+    assert not t.backup
+    assert t._header_sig.content == SIGNATURE
 
 
 def test__write_header(fresh_disk: disk.Disk):
-    primary_header = table.Table(fresh_disk)
+    primary_header = table.Table(fresh_disk.geometry)
     primary_header._write_table()
 
-    def read_header(header):
+    def test_header(header):
         assert header.buffer.read(8) == SIGNATURE
         assert header.buffer.read(4) == REVISION
         assert header.buffer.read(4) == HEADER_SIZE
@@ -68,12 +69,12 @@ def test__write_header(fresh_disk: disk.Disk):
     primary_header._write_header()
     primary_header.buffer.seek(0)
 
-    read_header(primary_header)
+    test_header(primary_header)
 
-    backup_header = table.Table(fresh_disk, is_backup=True)
+    backup_header = table.Table(fresh_disk.geometry, is_backup=True)
     backup_header._write_table()
     backup_header._write_header()
     backup_header.buffer.seek(
-        int(32 * fresh_disk.sector_size)
+        int(32 * fresh_disk.geometry.sector_size)
     )  # secondary header lba start
-    read_header(backup_header)
+    test_header(backup_header)

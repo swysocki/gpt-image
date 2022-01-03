@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Union
 
-from pygpt_disk.disk import Disk
+from pygpt_disk.disk import Geometry
 
 
 class Table:
@@ -26,30 +26,33 @@ class Table:
         content: Union[int, str, bytes]
 
     def __init__(
-        self, disk: Disk, is_backup: bool = False, sector_size: int = 512
+        self, geometry: Geometry, is_backup: bool = False, sector_size: int = 512
     ) -> None:
-        self.disk = disk
         self.backup = is_backup
         self.buffer = io.BytesIO()
-
+        self.geometry = geometry
         self._header_sig = Table.HeaderEntry(0, 8, b"EFI PART")
         self._revision = Table.HeaderEntry(8, 4, b"\x00\x00\x01\x00")
         self._header_size = Table.HeaderEntry(12, 4, 92)
         self._header_crc = Table.HeaderEntry(16, 4, 0)
         self._reserved = Table.HeaderEntry(20, 4, 0)
-        self._primary_header_lba = Table.HeaderEntry(24, 8, 1)
+        self._primary_header_lba = Table.HeaderEntry(24, 8, geometry.primary_header_lba)
         self._secondary_header_lba = Table.HeaderEntry(
-            32, 8, int(self.disk.sectors - 1)
+            32, 8, geometry.backup_header_lba
         )
         if self.backup:
             self._primary_header_lba.offset = 32
             self._secondary_header_lba.offset = 24
-        self._partition_start_lba = Table.HeaderEntry(40, 8, 34)
-        self._partition_last_lba = Table.HeaderEntry(48, 8, int(self.disk.sectors - 34))
+        self._partition_start_lba = Table.HeaderEntry(
+            40, 8, geometry.partition_start_lba
+        )
+        self._partition_last_lba = Table.HeaderEntry(48, 8, geometry.partition_last_lba)
         self._disk_guid = Table.HeaderEntry(56, 16, uuid.uuid4().bytes_le)
-        self._partition_array_start = Table.HeaderEntry(72, 8, 2)
+        self._partition_array_start = Table.HeaderEntry(
+            72, 8, geometry.primary_array_lba
+        )
         if self.backup:
-            self._partition_array_start.content = int(self.disk.sectors - 33)
+            self._partition_array_start.content = geometry.backup_header_array_lba
         self._partition_array_length = Table.HeaderEntry(80, 4, 128)
         self._partition_entry_size = Table.HeaderEntry(84, 4, 128)
         self._partition_array_crc = Table.HeaderEntry(88, 4, 0)
@@ -64,17 +67,16 @@ class Table:
 
     def _write_table(self) -> None:
         # start with blank table
-        self.buffer.write(b"\x00" * 33 * self.disk.sector_size)
+        self.buffer.write(b"\x00" * 33 * self.geometry.sector_size)
 
     def _write_header(self) -> None:
         """Write the table header to proper location
 
         The header is typically 92 bytes with the remainder of bytes in the sector
-        zeroed. The primary header is is at LBA 1 with the partition entries at 2 - 33.
+        zeroed. The primary header is at LBA 1 with the partition entries at 2 - 33.
         The backup header is at LBA -1 with the partition entries at -2 to -33.
 
         """
-
         self._write_section(self._header_sig)
         self._write_section(self._revision)
         self._write_section(self._header_size)
