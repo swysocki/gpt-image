@@ -1,6 +1,7 @@
-from pygpt_disk import table, disk
-import pytest
 import uuid
+
+import pytest
+from gpt_image import disk, table
 
 DISK_SIZE = 8 * 1024 * 1024
 SECTOR_SIZE = 512

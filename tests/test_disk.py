@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from pygpt_disk import disk
+from gpt_image import disk
 
 DISK_SIZE = 8 * 1024 * 1024
 DISK_NAME = "test-image.img"

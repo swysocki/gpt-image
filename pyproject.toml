@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "pygpt-disk"
+name = "gpt-image"
 version = "0.1.0"
-description = "GPT disk tool"
+description = "GPT disk image tool"
 authors = ["Scott Wysocki <swysocki@gmail.com>"]
 
 [tool.poetry.dependencies]

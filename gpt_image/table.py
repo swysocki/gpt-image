@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Union
 
-from pygpt_disk.disk import Geometry
+from gpt_image.disk import Geometry
 
 
 class Table:
@@ -94,10 +94,10 @@ class Table:
 
         # @TODO: write partition entries
 
-        # once the partitions are written the CRC is calculated
+        # once the partitions are written its CRC is calculated
         self._checksum_partitions()
 
-        # once the header is written the CRC is calculated
+        # once the header is written its CRC is calculated
         self._checksum_header()
 
     def _write_section(self, entry: HeaderEntry) -> None:
