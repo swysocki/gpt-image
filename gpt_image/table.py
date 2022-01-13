@@ -103,7 +103,8 @@ class Header:
 
     def as_bytes(self) -> bytes:
         """Return the header as bytes"""
-        return [x.data for x in self.header.header_fields]
+        byte_list = [x.data for x in self.header_fields]
+        return b"".join(byte_list)
 
 
 class Partition:
@@ -141,7 +142,8 @@ class Partition:
 
     def as_bytes(self) -> bytes:
         """Return the partition as bytes"""
-        return [x.data for x in self.partition.partition_fields]
+        byte_list = [x.data for x in self.partition.partition_fields]
+        return b"".join(byte_list)
 
 
 class Table:
@@ -170,7 +172,7 @@ class Table:
         self.checksum_header(self.primary_header)
         self.checksum_header(self.secondary_header)
 
-        with open(self.disk.name, "+b") as f:
+        with open(self.disk.image_path, "r+b") as f:
             # move to primary header location and write
             f.seek(self.geometry.primary_header_byte)
             f.write(self.primary_header.as_bytes())
@@ -197,4 +199,5 @@ class Table:
         """
         # zero the old checksum before calculating
         header.header_crc.data = b"\x00" * 4
-        header.header_crc.data = binascii.crc32(header.as_bytes).to_bytes(4, "little")
+
+        header.header_crc.data = binascii.crc32(header.as_bytes()).to_bytes(4, "little")

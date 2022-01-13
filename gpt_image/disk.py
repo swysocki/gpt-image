@@ -56,13 +56,14 @@ class Disk:
     def __init__(self, image_path: str, size: int = 0) -> None:
         """Init Disk with a file path and size in bytes"""
         # @TODO: check that disk is large enough to contain all table data
-        self._image_path = pathlib.Path(image_path)
-        self.name = self._image_path.name
-        self._size = size
-        if self._image_path.exists():
-            self._size = self._image_path.stat().st_size
-        self.geometry = Geometry(self._size)
+        self.image_path = pathlib.Path(image_path)
+        self.name = self.image_path.name
+        self.size = size
+        if self.image_path.exists():
+            self.size = self.image_path.stat().st_size
+        self.geometry = Geometry(self.size)
+        self.write()
 
     def write(self) -> None:
         """Write blank disk"""
-        self._image_path.write_bytes(b"\x00" * self.geometry.total_bytes)
+        self.image_path.write_bytes(b"\x00" * self.geometry.total_bytes)
