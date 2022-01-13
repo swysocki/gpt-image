@@ -55,6 +55,7 @@ class Disk:
 
     def __init__(self, image_path: str, size: int = 0) -> None:
         """Init Disk with a file path and size in bytes"""
+        # @TODO: check that disk is large enough to contain all table data
         self._image_path = pathlib.Path(image_path)
         self.name = self._image_path.name
         self._size = size
