@@ -118,18 +118,20 @@ class Partition:
         LinuxFileSystem = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
         EFISystemPartition = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
 
-    def __init__(self):
+    def __init__(self, partition_guid: uuid.UUID, size: int, name: str):
         """
         # @TODO: add 64 bits of partition attributes
         """
         self.type_guid = TableEntry(
             0, 16, uuid.UUID(Partition.Type.LinuxFileSystem).bytes_le
         )
-        self.partition_guid = TableEntry(16, 16, uuid.uuid4().bytes_le)
+        if not partition_guid:
+            self.partition_guid = TableEntry(16, 16, uuid.uuid4().bytes_le)
+
         self.first_lba = TableEntry(32, 8, b"\x00" * 8)
         self.last_lba = TableEntry(40, 8, b"\x00" * 8)
         self.attribute_flags = TableEntry(48, 8, b"\x00" * 8)
-        self.partition_name = TableEntry(56, 72, b"")
+        self.partition_name = TableEntry(56, 72, bytes(name, encoding="utf_16_le"))
 
         self.partition_fields = [
             self.type_guid,
@@ -139,6 +141,9 @@ class Partition:
             self.attribute_flags,
             self.partition_name,
         ]
+
+    def _get_partition_start_lba(self):
+        """Calculate the partition's start LBA"""
 
     def as_bytes(self) -> bytes:
         """Return the partition as bytes"""
@@ -160,7 +165,7 @@ class Table:
         self.primary_header = Header(self.geometry)
         self.secondary_header = Header(self.geometry, is_backup=True)
         # partition entry array
-        self.partitions: List[Partition] = []
+        self.partition_entries: List[Partition] = []
 
     def write(self):
         """Write the table to disk"""
@@ -179,6 +184,11 @@ class Table:
             # move to secondary header location and write
             f.seek(self.geometry.backup_header_byte)
             f.write(self.secondary_header.as_bytes())
+
+    def create_partition(self):
+        pass
+        part = Partition()
+        # adds a partition object as bytes to the partition_entries list
 
     def checksum_partitions(self, header: Header):
         """Checksum the partition entries"""

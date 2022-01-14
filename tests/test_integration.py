@@ -6,3 +6,6 @@ def test_e2e():
 
     t = table.Table(new_disk)
     t.write()
+    # this writes an empty table. the next step would typically
+    # be to create a partition:
+    # t.create_partition()
