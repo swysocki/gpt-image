@@ -5,7 +5,7 @@ class Geometry:
     """Geometry of disk image
 
     Attributes:
-        sector_size: statically set to 512 bytes
+        sector_size: typically set to 512 bytes
         total_bytes: disk size in bytes
         total_sectors: number of sectors on the disk
         total_lba: number of logical blocks on the disk
@@ -21,9 +21,9 @@ class Geometry:
         backup_header_array_byte: byte where the backup partition array starts
     """
 
-    def __init__(self, size: int) -> None:
+    def __init__(self, size: int, sector_size: int = 512) -> None:
         """Init Geometry with size in bytes"""
-        self.sector_size = 512
+        self.sector_size = sector_size
         self.total_bytes = size
         self.total_sectors = int(size / self.sector_size)
         self.total_lba = int(size / self.sector_size)
@@ -35,10 +35,8 @@ class Geometry:
         self.primary_array_byte = int(self.primary_array_lba * self.sector_size)
         self.backup_header_lba = int(self.total_lba - 1)
         self.backup_header_byte = int(self.backup_header_lba * self.sector_size)
-        self.backup_header_array_lba = int(self.total_lba - 33)
-        self.backup_header_array_byte = int(
-            self.backup_header_array_lba * self.sector_size
-        )
+        self.backup_array_lba = int(self.total_lba - 33)
+        self.backup_array_byte = int(self.backup_array_lba * self.sector_size)
 
 
 class Disk:
@@ -53,7 +51,9 @@ class Disk:
         geometry:
     """
 
-    def __init__(self, image_path: str, size: int = 0) -> None:
+    def __init__(
+        self, image_path: str, size: int = 0, fresh_disk: bool = False
+    ) -> None:
         """Init Disk with a file path and size in bytes"""
         # @TODO: check that disk is large enough to contain all table data
         self.image_path = pathlib.Path(image_path)
@@ -62,8 +62,6 @@ class Disk:
         if self.image_path.exists():
             self.size = self.image_path.stat().st_size
         self.geometry = Geometry(self.size)
-        self.write()
-
-    def write(self) -> None:
-        """Write blank disk"""
-        self.image_path.write_bytes(b"\x00" * self.geometry.total_bytes)
+        # @NOTE: this is unnecessary
+        if not self.image_path.exists() or fresh_disk:
+            self.image_path.write_bytes(b"\x00" * self.geometry.total_bytes)

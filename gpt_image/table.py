@@ -5,7 +5,7 @@ Header information reference: https://en.wikipedia.org/wiki/GUID_Partition_Table
 import binascii
 import uuid
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List
 
 from gpt_image.disk import Disk, Geometry
 
@@ -115,9 +115,9 @@ class Header:
                 self.secondary_header_lba.data,
                 self.primary_header_lba.data,
             )
-            self.partition_array_start.data = (
-                self.geometry.backup_header_array_lba
-            ).to_bytes(8, "little")
+            self.partition_array_start.data = (self.geometry.backup_array_lba).to_bytes(
+                8, "little"
+            )
 
         # header start byte relative the table itself, not the disk
         # primary will be 0 secondary will be LBA 32
@@ -183,6 +183,8 @@ class Partition:
         )
         if not partition_guid:
             self.partition_guid = TableEntry(16, 16, uuid.uuid4().bytes_le)
+        else:
+            self.partition_guid = TableEntry(16, 16, partition_guid.bytes_le)
         self.alignment = alignment
         self._partition_list = partition_list
         self._partition_size = size
@@ -209,7 +211,7 @@ class Partition:
         """Calculate the partition's LBAs"""
         last_partition = self._start_lba.to_bytes(4, "little")
         if self._partition_list:
-            last_partition = self.partition_list[-1].last_lba.data
+            last_partition = self._partition_list[-1].last_lba.data
         first_lba = int.from_bytes(last_partition, "little") + 1
         # calculate partition size in LBA with alignment considered
         total_lba = int(self._partition_size / (self._sector_size * self.alignment) + 1)
@@ -224,9 +226,9 @@ class Partition:
 class Table:
     """GPT Partition Table Object
 
-    A table contains a primary and secondary header and a primary
-    and secondary partition entry table.  All management of their entries
-    is done with this object.
+    The Table class the meant to be used by the consumer.  The underlying
+    classes should be called through functions in this class and not
+    directly used.
     """
 
     def __init__(self, disk: Disk, sector_size: int = 512) -> None:
@@ -267,7 +269,13 @@ class Table:
             f.seek(self.geometry.backup_header_byte)
             f.write(self.secondary_header.as_bytes())
 
-    def create_partition(self, name: str, size: int, guid: str, alignment: int = 8):
+            # write secondary partition table
+            # f.seek(self.geometry.backup_array_byte)
+            # f.write(b"".join(self.partition_entries))
+
+    def create_partition(
+        self, name: str, size: int, guid: uuid.UUID, alignment: int = 8
+    ):
         part = Partition(
             self.partition_entries,
             name,
