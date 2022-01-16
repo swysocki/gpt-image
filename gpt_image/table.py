@@ -5,7 +5,6 @@ Header information reference: https://en.wikipedia.org/wiki/GUID_Partition_Table
 import binascii
 import uuid
 from dataclasses import dataclass
-from typing import List
 
 from gpt_image.disk import Disk, Geometry
 
@@ -156,6 +155,12 @@ class Header:
 
 
 class Partition:
+    """Partition class represents a GPT partition
+
+    Start and end LBA are set to None because they must be calculated
+    from a table's partition list.
+    """
+
     @dataclass
     class Type:
         """GPT Partition Types
@@ -168,35 +173,30 @@ class Partition:
 
     def __init__(
         self,
-        partition_list: List,
-        name: str,
-        size: int,
-        partition_guid: uuid.UUID,
-        alignment: int,
-        disk_geometry: Geometry,
+        name: str = None,
+        size: int = 0,
+        partition_guid: uuid.UUID = None,
+        alignment: int = 8,
     ):
-        """
-        # @TODO: add 64 bits of partition attributes
-        """
-        self.type_guid = TableEntry(
-            0, 16, uuid.UUID(Partition.Type.LinuxFileSystem).bytes_le
-        )
-        if not partition_guid:
-            self.partition_guid = TableEntry(16, 16, uuid.uuid4().bytes_le)
-        else:
-            self.partition_guid = TableEntry(16, 16, partition_guid.bytes_le)
-        self.alignment = alignment
-        self._partition_list = partition_list
-        self._partition_size = size
-        self._sector_size = disk_geometry.sector_size
-        self._start_lba = disk_geometry.partition_start_lba
-
-        start, end = self._get_partition_lba()
-        self.first_lba = TableEntry(32, 8, start.to_bytes(8, "little"))
-        self.last_lba = TableEntry(40, 8, end.to_bytes(8, "little"))
-
+        # create an empty partition object
+        self.type_guid = TableEntry(0, 16, b"\x00" * 16)
+        self.partition_guid = TableEntry(16, 16, b"\x00" * 16)
+        self.first_lba = TableEntry(32, 8, b"\x00" * 8)
+        self.last_lba = TableEntry(40, 8, b"\x00" * 8)
         self.attribute_flags = TableEntry(48, 8, b"\x00" * 8)
-        self.partition_name = TableEntry(56, 72, bytes(name, encoding="utf_16_le"))
+        self.partition_name = TableEntry(56, 72, b"\x00" * 72)
+
+        # if name is set, this isn't an empty partition. Set relevant fields
+        if name:
+            self.type_guid.data = uuid.UUID(Partition.Type.LinuxFileSystem).bytes_le
+            if not partition_guid:
+                self.partition_guid.data = uuid.uuid4().bytes_le
+            else:
+                self.partition_guid.data = partition_guid.bytes_le
+            self.partition_name = bytes(name, encoding="utf_16_le")
+
+        self.alignment = alignment
+        self.size = size
 
         self.partition_fields = [
             self.type_guid,
@@ -206,16 +206,6 @@ class Partition:
             self.attribute_flags,
             self.partition_name,
         ]
-
-    def _get_partition_lba(self) -> tuple:
-        """Calculate the partition's LBAs"""
-        last_partition = self._start_lba.to_bytes(4, "little")
-        if self._partition_list:
-            last_partition = self._partition_list[-1].last_lba.data
-        first_lba = int.from_bytes(last_partition, "little") + 1
-        # calculate partition size in LBA with alignment considered
-        total_lba = int(self._partition_size / (self._sector_size * self.alignment) + 1)
-        return first_lba, first_lba + total_lba
 
     def as_bytes(self) -> bytes:
         """Return the partition as bytes"""
@@ -237,8 +227,10 @@ class Table:
         self.protective_mbr = ProtectiveMBR(self.geometry)
         self.primary_header = Header(self.geometry)
         self.secondary_header = Header(self.geometry, is_backup=True)
-        # partition entry array as a list of partitions in bytes
-        self.partition_entries = []
+
+        # @NOTE: currently using a blank partition entry table
+        # until partitions are sorted out
+        self.partition_entries = [Partition().as_bytes()] * 128
 
     def write(self):
         """Write the table to disk"""
@@ -270,30 +262,36 @@ class Table:
             f.write(self.secondary_header.as_bytes())
 
             # write secondary partition table
-            # f.seek(self.geometry.backup_array_byte)
-            # f.write(b"".join(self.partition_entries))
+            f.seek(self.geometry.backup_array_byte)
+            f.write(b"".join(self.partition_entries))
 
     def create_partition(
         self, name: str, size: int, guid: uuid.UUID, alignment: int = 8
     ):
         part = Partition(
-            self.partition_entries,
             name,
             size,
             guid,
             alignment,
-            self.geometry,
         )
-        self.partition_entries.append(part.as_bytes())
+        # find the first empty partition index
+        for idx, value in enumerate(self.partition_entries):
+            # check for a GUID, if it is missing, the partition is empty
+            if int.from_bytes(value[:16]) == 0:
+                self.partition_entries[idx] = part.as_bytes()
+
+    def _last_partition_lba(self):
+        # find the partition with the largest LBA
+        # this is where the next partition will start
+        last_lba = 0
+        for partition in self.partition_entries:
+            if int.from_bytes(partition[:16]) != 0:
+                last_lba = int.from_bytes()
 
     def checksum_partitions(self, header: Header):
         """Checksum the partition entries"""
 
-        # if there are no partitions, zero out the partition entries
-        # otherwise,
-        part_entry_bytes = b"\x00" * 128 * 128
-        if self.partition_entries:
-            part_entry_bytes = b"".join(self.partition_entries)
+        part_entry_bytes = b"".join(self.partition_entries)
 
         header.partition_array_crc.data = binascii.crc32(part_entry_bytes).to_bytes(
             4, "little"
