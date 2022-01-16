@@ -26,6 +26,47 @@ class TableEntry:
     # @TODO: make default data b"\x00" * length
 
 
+class ProtectiveMBR:
+    """Protective MBR Table Entry
+
+    Provides the bare minimum entries needed to represent a protective MBR.
+    https://thestarman.pcministry.com/asm/mbr/PartTables.htm#pte
+
+
+    """
+
+    def __init__(self, geometry: Geometry):
+        self.boot_indictor = TableEntry(0, 1, b"\x00")  # not bootable
+        self.start_chs = TableEntry(1, 3, b"\x00\x00\x00")  # ignore the start CHS
+        self.partition_type = TableEntry(4, 1, b"\xEE")  # GPT partition type
+        self.end_chs = TableEntry(5, 3, b"\x00\x00\x00")  # ignore the end CHS
+        self.start_sector = TableEntry(
+            8, 4, geometry.primary_header_lba.to_bytes(4, "little")
+        )
+        self.partition_size = TableEntry(
+            12, 4, geometry.total_sectors.to_bytes(4, "little")
+        )
+        self.signature = TableEntry(510, 4, b"\x55\xAA")
+
+        self.mbr_fields = [
+            self.boot_indictor,
+            self.start_chs,
+            self.partition_type,
+            self.end_chs,
+            self.start_sector,
+            self.partition_size,
+        ]
+
+    def as_bytes(self):
+        """Get the Protective MBR as bytes
+
+        Does not include the signature
+
+        """
+        byte_list = [x.data for x in self.mbr_fields]
+        return b"".join(byte_list)
+
+
 class Header:
     """GPT Partition Table Header Object
 
@@ -39,6 +80,7 @@ class Header:
     def __init__(self, geometry: Geometry, is_backup: bool = False):
         self.backup = is_backup
         self.geometry = geometry
+        # @NOTE: the offsets are not being used, at may be removed
         self.header_sig = TableEntry(0, 8, b"EFI PART")
         self.revision = TableEntry(8, 4, b"\x00\x00\x01\x00")
         self.header_size = TableEntry(12, 4, (92).to_bytes(4, "little"))
@@ -56,7 +98,10 @@ class Header:
         self.partition_last_lba = TableEntry(
             48, 8, (self.geometry.partition_last_lba).to_bytes(8, "little")
         )
-        self.disk_guid = TableEntry(56, 16, uuid.uuid4().bytes_le)
+        # self.disk_guid = TableEntry(56, 16, uuid.uuid4().bytes_le)
+        self.disk_guid = TableEntry(
+            56, 16, uuid.UUID("B3D6E0E0-7378-4E9A-B0A8-503D8C58E536").bytes_le
+        )
         self.partition_array_start = TableEntry(
             72, 8, (self.geometry.primary_array_lba).to_bytes(8, "little")
         )
@@ -66,8 +111,10 @@ class Header:
         self.reserved_padding = TableEntry(92, 420, b"\x00" * 420)
         # the secondary header adjustments
         if self.backup:
-            self.primary_header_lba.offset = 32
-            self.secondary_header_lba.offset = 24
+            self.primary_header_lba.data, self.secondary_header_lba.data = (
+                self.secondary_header_lba.data,
+                self.primary_header_lba.data,
+            )
             self.partition_array_start.data = (
                 self.geometry.backup_header_array_lba
             ).to_bytes(8, "little")
@@ -82,7 +129,8 @@ class Header:
 
         # group the header fields to allow byte operations such as
         # checksum
-        # this can be done with the `inspect` module
+        # this can be done with the `inspect` module OR just use bytearrays
+        # and remove the TableEntry entirely
         self.header_fields = [
             self.header_sig,
             self.revision,
@@ -98,7 +146,7 @@ class Header:
             self.partition_array_length,
             self.partition_entry_size,
             self.partition_array_crc,
-            self.reserved_padding,
+            # self.reserved_padding,
         ]
 
     def as_bytes(self) -> bytes:
@@ -184,9 +232,10 @@ class Table:
     def __init__(self, disk: Disk, sector_size: int = 512) -> None:
         self.disk = disk
         self.geometry = disk.geometry
+        self.protective_mbr = ProtectiveMBR(self.geometry)
         self.primary_header = Header(self.geometry)
         self.secondary_header = Header(self.geometry, is_backup=True)
-        # partition entry array
+        # partition entry array as a list of partitions in bytes
         self.partition_entries = []
 
     def write(self):
@@ -200,11 +249,20 @@ class Table:
         self.checksum_header(self.secondary_header)
 
         with open(self.disk.image_path, "r+b") as f:
-            # move to primary header location and write
+            # write protective MBR
+            f.seek(446)
+            f.write(self.protective_mbr.as_bytes())
+            f.seek(510)
+            f.write(self.protective_mbr.signature.data)
+
+            # write primary header
             f.seek(self.geometry.primary_header_byte)
             f.write(self.primary_header.as_bytes())
+
+            # write primary partition table
             f.seek(self.geometry.primary_array_byte)
             f.write(b"".join(self.partition_entries))
+
             # move to secondary header location and write
             f.seek(self.geometry.backup_header_byte)
             f.write(self.secondary_header.as_bytes())
@@ -223,7 +281,12 @@ class Table:
     def checksum_partitions(self, header: Header):
         """Checksum the partition entries"""
 
-        part_entry_bytes = b"".join(self.partition_entries)
+        # if there are no partitions, zero out the partition entries
+        # otherwise,
+        part_entry_bytes = b"\x00" * 128 * 128
+        if self.partition_entries:
+            part_entry_bytes = b"".join(self.partition_entries)
+
         header.partition_array_crc.data = binascii.crc32(part_entry_bytes).to_bytes(
             4, "little"
         )
