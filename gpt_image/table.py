@@ -193,7 +193,7 @@ class Partition:
                 self.partition_guid.data = uuid.uuid4().bytes_le
             else:
                 self.partition_guid.data = partition_guid.bytes_le
-            self.partition_name = bytes(name, encoding="utf_16_le")
+            self.partition_name.data = bytes(name, encoding="utf_16_le")
 
         self.alignment = alignment
         self.size = size
@@ -230,7 +230,7 @@ class Table:
 
         # @NOTE: currently using a blank partition entry table
         # until partitions are sorted out
-        self.partition_entries = [Partition().as_bytes()] * 128
+        self.partition_entries = [Partition()] * 128
 
     def write(self):
         """Write the table to disk"""
@@ -255,7 +255,7 @@ class Table:
 
             # write primary partition table
             f.seek(self.geometry.primary_array_byte)
-            f.write(b"".join(self.partition_entries))
+            f.write(self._partition_entries_as_bytes())
 
             # move to secondary header location and write
             f.seek(self.geometry.backup_header_byte)
@@ -263,7 +263,7 @@ class Table:
 
             # write secondary partition table
             f.seek(self.geometry.backup_array_byte)
-            f.write(b"".join(self.partition_entries))
+            f.write(self._partition_entries_as_bytes())
 
     def create_partition(
         self, name: str, size: int, guid: uuid.UUID, alignment: int = 8
@@ -275,24 +275,34 @@ class Table:
             alignment,
         )
         # find the first empty partition index
-        for idx, value in enumerate(self.partition_entries):
-            # check for a GUID, if it is missing, the partition is empty
-            if int.from_bytes(value[:16]) == 0:
-                self.partition_entries[idx] = part.as_bytes()
+        for idx, partition in enumerate(self.partition_entries):
+            if int.from_bytes(partition.partition_name.data, byteorder="little") == 0:
+                part.first_lba.data = self._first_lba()
+                last_lba = int(part.size / self.geometry.sector_size) + int.from_bytes(
+                    part.first_lba.data, byteorder="little"
+                )
+                part.last_lba.data = (last_lba).to_bytes(8, "little")
+                self.partition_entries[idx] = part
+                break
 
-    def _last_partition_lba(self):
-        # find the partition with the largest LBA
-        # this is where the next partition will start
+    def _first_lba(self) -> bytes:
+        """Find the last LBA used by a partition"""
         last_lba = 0
         for partition in self.partition_entries:
-            if int.from_bytes(partition[:16]) != 0:
-                last_lba = int.from_bytes()
+            last_lba_int = int.from_bytes(partition.last_lba.data, byteorder="little")
+            if last_lba_int > last_lba:
+                last_lba = last_lba_int
+        if last_lba == 0:
+            return (34).to_bytes(8, "little")
+        return (last_lba + 1).to_bytes(8, "little")
+
+    def _partition_entries_as_bytes(self):
+        parts = [x.as_bytes() for x in self.partition_entries]
+        return b"".join(parts)
 
     def checksum_partitions(self, header: Header):
         """Checksum the partition entries"""
-
-        part_entry_bytes = b"".join(self.partition_entries)
-
+        part_entry_bytes = self._partition_entries_as_bytes()
         header.partition_array_crc.data = binascii.crc32(part_entry_bytes).to_bytes(
             4, "little"
         )
