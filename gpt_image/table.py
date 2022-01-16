@@ -5,7 +5,7 @@ Header information reference: https://en.wikipedia.org/wiki/GUID_Partition_Table
 import binascii
 import uuid
 from dataclasses import dataclass
-from typing import List
+from typing import List, Tuple
 
 from gpt_image.disk import Disk, Geometry
 
@@ -118,7 +118,15 @@ class Partition:
         LinuxFileSystem = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
         EFISystemPartition = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
 
-    def __init__(self, partition_guid: uuid.UUID, size: int, name: str):
+    def __init__(
+        self,
+        partition_list: List,
+        name: str,
+        size: int,
+        partition_guid: uuid.UUID,
+        alignment: int,
+        disk_geometry: Geometry,
+    ):
         """
         # @TODO: add 64 bits of partition attributes
         """
@@ -127,9 +135,16 @@ class Partition:
         )
         if not partition_guid:
             self.partition_guid = TableEntry(16, 16, uuid.uuid4().bytes_le)
+        self.alignment = alignment
+        self._partition_list = partition_list
+        self._partition_size = size
+        self._sector_size = disk_geometry.sector_size
+        self._start_lba = disk_geometry.partition_start_lba
 
-        self.first_lba = TableEntry(32, 8, b"\x00" * 8)
-        self.last_lba = TableEntry(40, 8, b"\x00" * 8)
+        start, end = self._get_partition_lba()
+        self.first_lba = TableEntry(32, 8, start.to_bytes(8, "little"))
+        self.last_lba = TableEntry(40, 8, end.to_bytes(8, "little"))
+
         self.attribute_flags = TableEntry(48, 8, b"\x00" * 8)
         self.partition_name = TableEntry(56, 72, bytes(name, encoding="utf_16_le"))
 
@@ -142,12 +157,19 @@ class Partition:
             self.partition_name,
         ]
 
-    def _get_partition_start_lba(self):
-        """Calculate the partition's start LBA"""
+    def _get_partition_lba(self) -> tuple:
+        """Calculate the partition's LBAs"""
+        last_partition = self._start_lba.to_bytes(4, "little")
+        if self._partition_list:
+            last_partition = self.partition_list[-1].last_lba.data
+        first_lba = int.from_bytes(last_partition, "little") + 1
+        # calculate partition size in LBA with alignment considered
+        total_lba = int(self._partition_size / (self._sector_size * self.alignment) + 1)
+        return first_lba, first_lba + total_lba
 
     def as_bytes(self) -> bytes:
         """Return the partition as bytes"""
-        byte_list = [x.data for x in self.partition.partition_fields]
+        byte_list = [x.data for x in self.partition_fields]
         return b"".join(byte_list)
 
 
@@ -165,14 +187,14 @@ class Table:
         self.primary_header = Header(self.geometry)
         self.secondary_header = Header(self.geometry, is_backup=True)
         # partition entry array
-        self.partition_entries: List[Partition] = []
+        self.partition_entries = []
 
     def write(self):
         """Write the table to disk"""
-        pass
         # calculate partition checksum and write to header
         self.checksum_partitions(self.primary_header)
         self.checksum_partitions(self.secondary_header)
+
         # calculate header checksum and write to header
         self.checksum_header(self.primary_header)
         self.checksum_header(self.secondary_header)
@@ -181,23 +203,28 @@ class Table:
             # move to primary header location and write
             f.seek(self.geometry.primary_header_byte)
             f.write(self.primary_header.as_bytes())
+            f.seek(self.geometry.primary_array_byte)
+            f.write(b"".join(self.partition_entries))
             # move to secondary header location and write
             f.seek(self.geometry.backup_header_byte)
             f.write(self.secondary_header.as_bytes())
 
-    def create_partition(self):
-        pass
-        part = Partition()
-        # adds a partition object as bytes to the partition_entries list
+    def create_partition(self, name: str, size: int, guid: str, alignment: int = 8):
+        part = Partition(
+            self.partition_entries,
+            name,
+            size,
+            guid,
+            alignment,
+            self.geometry,
+        )
+        self.partition_entries.append(part.as_bytes())
 
     def checksum_partitions(self, header: Header):
         """Checksum the partition entries"""
 
-        partition_bytes = b""
-        for part in self.partitions:
-            for field in part.partition_fields:
-                partition_bytes += field.data
-        header.partition_array_crc.data = binascii.crc32(partition_bytes).to_bytes(
+        part_entry_bytes = b"".join(self.partition_entries)
+        header.partition_array_crc.data = binascii.crc32(part_entry_bytes).to_bytes(
             4, "little"
         )
 
