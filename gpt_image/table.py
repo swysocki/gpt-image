@@ -193,7 +193,9 @@ class Partition:
                 self.partition_guid.data = uuid.uuid4().bytes_le
             else:
                 self.partition_guid.data = partition_guid.bytes_le
-            self.partition_name.data = bytes(name, encoding="utf_16_le")
+            b_name = bytes(name, encoding="utf_16_le")
+            # ensure the partition name is padded
+            self.partition_name.data = b_name + bytes(72 - len(b_name))
 
         self.alignment = alignment
         self.size = size
@@ -294,6 +296,7 @@ class Table:
                 last_lba = last_lba_int
         if last_lba == 0:
             return (34).to_bytes(8, "little")
+        # @NOTE: this is NOT proper alignment
         return (last_lba + 1).to_bytes(8, "little")
 
     def _partition_entries_as_bytes(self):
