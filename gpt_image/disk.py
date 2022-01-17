@@ -4,6 +4,8 @@ import pathlib
 class Geometry:
     """Geometry of disk image
 
+    This is a convenience class that provides geometry calculations for 
+
     Attributes:
         sector_size: typically set to 512 bytes
         total_bytes: disk size in bytes
