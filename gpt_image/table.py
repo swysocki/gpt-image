@@ -145,7 +145,6 @@ class Header:
             self.partition_array_length,
             self.partition_entry_size,
             self.partition_array_crc,
-            # self.reserved_padding,
         ]
 
     def as_bytes(self) -> bytes:
@@ -178,6 +177,12 @@ class Partition:
         partition_guid: uuid.UUID = None,
         alignment: int = 8,
     ):
+        """Initialize Partition Object
+
+        All parameters have a default value to allow Partition() to create
+        an empty partition object.  If "name" is set, we assume this is not
+        an empty object and set the other values.
+        """
         # create an empty partition object
         self.type_guid = TableEntry(0, 16, b"\x00" * 16)
         self.partition_guid = TableEntry(16, 16, b"\x00" * 16)
@@ -230,8 +235,6 @@ class Table:
         self.primary_header = Header(self.geometry)
         self.secondary_header = Header(self.geometry, is_backup=True)
 
-        # @NOTE: currently using a blank partition entry table
-        # until partitions are sorted out
         self.partition_entries = [Partition()] * 128
 
     def write(self):
@@ -318,5 +321,4 @@ class Table:
         """
         # zero the old checksum before calculating
         header.header_crc.data = b"\x00" * 4
-
         header.header_crc.data = binascii.crc32(header.as_bytes()).to_bytes(4, "little")
