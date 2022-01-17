@@ -1,6 +1,7 @@
-from gpt_image.disk import Geometry, Disk
-import pytest
 from pathlib import Path
+
+import pytest
+from gpt_image.disk import Disk, Geometry
 
 
 def test_default_geometry():

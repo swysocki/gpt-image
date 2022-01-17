@@ -286,12 +286,22 @@ class Table:
                 last_lba = int(part.size / self.geometry.sector_size) + int.from_bytes(
                     part.first_lba.data, byteorder="little"
                 )
+                # @NOTE: last_lba must consider alignment
                 part.last_lba.data = (last_lba).to_bytes(8, "little")
                 self.partition_entries[idx] = part
                 break
 
     def _first_lba(self) -> bytes:
-        """Find the last LBA used by a partition"""
+        """Calculate the first LBA of a new partition
+
+        Search for the largest LBA, this will be used to calculate the first
+        LBA of the partition being created.  If it is 0, all partitions are empty
+        and we must start at LBA 34.
+
+        Example: the partition with the largest LBA is LBA 412. The new partition's
+        LBA will be set to 413 (412 + 1)
+
+        """
         last_lba = 0
         for partition in self.partition_entries:
             last_lba_int = int.from_bytes(partition.last_lba.data, byteorder="little")
@@ -301,6 +311,10 @@ class Table:
             return (34).to_bytes(8, "little")
         # @NOTE: this is NOT proper alignment
         return (last_lba + 1).to_bytes(8, "little")
+
+    def _last_lba(self, size: int) -> bytes:
+        """Calculate the last LBA of a new partition"""
+        pass
 
     def _partition_entries_as_bytes(self):
         parts = [x.as_bytes() for x in self.partition_entries]
