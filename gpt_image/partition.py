@@ -1,10 +1,9 @@
 import uuid
 from dataclasses import dataclass
 from math import ceil
-from tkinter import W
 
 from gpt_image.disk import Geometry
-from gpt_image.table import TableEntry
+from gpt_image.entry import Entry
 
 
 class Partition:
@@ -41,12 +40,12 @@ class Partition:
           size: partition size in Bytes
         """
         # create an empty partition object
-        self.type_guid = TableEntry(0, 16, b"\x00" * 16)
-        self.partition_guid = TableEntry(16, 16, b"\x00" * 16)
-        self.first_lba = TableEntry(32, 8, b"\x00" * 8)
-        self.last_lba = TableEntry(40, 8, b"\x00" * 8)
-        self.attribute_flags = TableEntry(48, 8, b"\x00" * 8)
-        self.partition_name = TableEntry(56, 72, b"\x00" * 72)
+        self.type_guid = Entry(0, 16, b"\x00" * 16)
+        self.partition_guid = Entry(16, 16, b"\x00" * 16)
+        self.first_lba = Entry(32, 8, b"\x00" * 8)
+        self.last_lba = Entry(40, 8, b"\x00" * 8)
+        self.attribute_flags = Entry(48, 8, b"\x00" * 8)
+        self.partition_name = Entry(56, 72, b"\x00" * 72)
 
         # if name is set, this isn't an empty partition. Set relevant fields
         if name:
@@ -110,7 +109,7 @@ class PartitionEntry:
 
         def next_lba(end_lba: int, alignment: int):
             m = int(end_lba / alignment)
-            return m * alignment
+            return (m + 1) * alignment
 
         largest_lba = 0
         for part in self.entries:
@@ -132,7 +131,8 @@ class PartitionEntry:
 
         # round the LBA up to ensure our LBA will hold the partition
         lba = ceil(partition.size / self._geometry.sector_size)
-        return (partition.first_lba + lba) - 1
+        f_lba = int.from_bytes(partition.first_lba.data, byteorder="little")
+        return (f_lba + lba) - 1
 
     def _get_next_partition(self) -> int:
         """Return the index of the next unused partition"""
