@@ -7,10 +7,12 @@ import uuid
 from dataclasses import dataclass
 
 from gpt_image.disk import Disk, Geometry
+from gpt_image.entry import Entry
+from gpt_image.partition import Partition, PartitionEntry
 
 
 @dataclass
-class TableEntry:
+class Entry:
     """Individual table entries
 
     Creates a consistent structure for writing GPT table data to its
@@ -35,17 +37,15 @@ class ProtectiveMBR:
     """
 
     def __init__(self, geometry: Geometry):
-        self.boot_indictor = TableEntry(0, 1, b"\x00")  # not bootable
-        self.start_chs = TableEntry(1, 3, b"\x00\x00\x00")  # ignore the start CHS
-        self.partition_type = TableEntry(4, 1, b"\xEE")  # GPT partition type
-        self.end_chs = TableEntry(5, 3, b"\x00\x00\x00")  # ignore the end CHS
-        self.start_sector = TableEntry(
+        self.boot_indictor = Entry(0, 1, b"\x00")  # not bootable
+        self.start_chs = Entry(1, 3, b"\x00\x00\x00")  # ignore the start CHS
+        self.partition_type = Entry(4, 1, b"\xEE")  # GPT partition type
+        self.end_chs = Entry(5, 3, b"\x00\x00\x00")  # ignore the end CHS
+        self.start_sector = Entry(
             8, 4, geometry.primary_header_lba.to_bytes(4, "little")
         )
-        self.partition_size = TableEntry(
-            12, 4, geometry.total_sectors.to_bytes(4, "little")
-        )
-        self.signature = TableEntry(510, 4, b"\x55\xAA")
+        self.partition_size = Entry(12, 4, geometry.total_sectors.to_bytes(4, "little"))
+        self.signature = Entry(510, 4, b"\x55\xAA")
 
         self.mbr_fields = [
             self.boot_indictor,
@@ -80,34 +80,34 @@ class Header:
         self.backup = is_backup
         self.geometry = geometry
         # @NOTE: the offsets are not being used, at may be removed
-        self.header_sig = TableEntry(0, 8, b"EFI PART")
-        self.revision = TableEntry(8, 4, b"\x00\x00\x01\x00")
-        self.header_size = TableEntry(12, 4, (92).to_bytes(4, "little"))
-        self.header_crc = TableEntry(16, 4, (0).to_bytes(4, "little"))
-        self.reserved = TableEntry(20, 4, (0).to_bytes(4, "little"))
-        self.primary_header_lba = TableEntry(
+        self.header_sig = Entry(0, 8, b"EFI PART")
+        self.revision = Entry(8, 4, b"\x00\x00\x01\x00")
+        self.header_size = Entry(12, 4, (92).to_bytes(4, "little"))
+        self.header_crc = Entry(16, 4, (0).to_bytes(4, "little"))
+        self.reserved = Entry(20, 4, (0).to_bytes(4, "little"))
+        self.primary_header_lba = Entry(
             24, 8, (self.geometry.primary_header_lba).to_bytes(8, "little")
         )
-        self.secondary_header_lba = TableEntry(
+        self.secondary_header_lba = Entry(
             32, 8, (self.geometry.backup_header_lba).to_bytes(8, "little")
         )
-        self.partition_start_lba = TableEntry(
+        self.partition_start_lba = Entry(
             40, 8, (self.geometry.partition_start_lba).to_bytes(8, "little")
         )
-        self.partition_last_lba = TableEntry(
+        self.partition_last_lba = Entry(
             48, 8, (self.geometry.partition_last_lba).to_bytes(8, "little")
         )
-        # self.disk_guid = TableEntry(56, 16, uuid.uuid4().bytes_le)
-        self.disk_guid = TableEntry(
+        # self.disk_guid = Entry(56, 16, uuid.uuid4().bytes_le)
+        self.disk_guid = Entry(
             56, 16, uuid.UUID("B3D6E0E0-7378-4E9A-B0A8-503D8C58E536").bytes_le
         )
-        self.partition_array_start = TableEntry(
+        self.partition_array_start = Entry(
             72, 8, (self.geometry.primary_array_lba).to_bytes(8, "little")
         )
-        self.partition_array_length = TableEntry(80, 4, (128).to_bytes(4, "little"))
-        self.partition_entry_size = TableEntry(84, 4, (128).to_bytes(4, "little"))
-        self.partition_array_crc = TableEntry(88, 4, (0).to_bytes(4, "little"))
-        self.reserved_padding = TableEntry(92, 420, b"\x00" * 420)
+        self.partition_array_length = Entry(80, 4, (128).to_bytes(4, "little"))
+        self.partition_entry_size = Entry(84, 4, (128).to_bytes(4, "little"))
+        self.partition_array_crc = Entry(88, 4, (0).to_bytes(4, "little"))
+        self.reserved_padding = Entry(92, 420, b"\x00" * 420)
         # the secondary header adjustments
         if self.backup:
             self.primary_header_lba.data, self.secondary_header_lba.data = (
@@ -129,7 +129,7 @@ class Header:
         # group the header fields to allow byte operations such as
         # checksum
         # this can be done with the `inspect` module OR just use bytearrays
-        # and remove the TableEntry entirely
+        # and remove the Entry entirely
         self.header_fields = [
             self.header_sig,
             self.revision,
@@ -153,73 +153,6 @@ class Header:
         return b"".join(byte_list)
 
 
-class Partition:
-    """Partition class represents a GPT partition
-
-    Start and end LBA are set to None because they must be calculated
-    from a table's partition list.
-    """
-
-    @dataclass
-    class Type:
-        """GPT Partition Types
-
-        https://en.wikipedia.org/wiki/GUID_Partition_Table#Partition_entries
-        """
-
-        LinuxFileSystem = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
-        EFISystemPartition = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
-
-    def __init__(
-        self,
-        name: str = None,
-        size: int = 0,
-        partition_guid: uuid.UUID = None,
-        alignment: int = 8,
-    ):
-        """Initialize Partition Object
-
-        All parameters have a default value to allow Partition() to create
-        an empty partition object.  If "name" is set, we assume this is not
-        an empty object and set the other values.
-        """
-        # create an empty partition object
-        self.type_guid = TableEntry(0, 16, b"\x00" * 16)
-        self.partition_guid = TableEntry(16, 16, b"\x00" * 16)
-        self.first_lba = TableEntry(32, 8, b"\x00" * 8)
-        self.last_lba = TableEntry(40, 8, b"\x00" * 8)
-        self.attribute_flags = TableEntry(48, 8, b"\x00" * 8)
-        self.partition_name = TableEntry(56, 72, b"\x00" * 72)
-
-        # if name is set, this isn't an empty partition. Set relevant fields
-        if name:
-            self.type_guid.data = uuid.UUID(Partition.Type.LinuxFileSystem).bytes_le
-            if not partition_guid:
-                self.partition_guid.data = uuid.uuid4().bytes_le
-            else:
-                self.partition_guid.data = partition_guid.bytes_le
-            b_name = bytes(name, encoding="utf_16_le")
-            # ensure the partition name is padded
-            self.partition_name.data = b_name + bytes(72 - len(b_name))
-
-        self.alignment = alignment
-        self.size = size
-
-        self.partition_fields = [
-            self.type_guid,
-            self.partition_guid,
-            self.first_lba,
-            self.last_lba,
-            self.attribute_flags,
-            self.partition_name,
-        ]
-
-    def as_bytes(self) -> bytes:
-        """Return the partition as bytes"""
-        byte_list = [x.data for x in self.partition_fields]
-        return b"".join(byte_list)
-
-
 class Table:
     """GPT Partition Table Object
 
@@ -235,7 +168,7 @@ class Table:
         self.primary_header = Header(self.geometry)
         self.secondary_header = Header(self.geometry, is_backup=True)
 
-        self.partition_entries = [Partition()] * 128
+        self.partitions = PartitionEntry(self.geometry)
 
     def write(self):
         """Write the table to disk"""
@@ -260,7 +193,7 @@ class Table:
 
             # write primary partition table
             f.seek(self.geometry.primary_array_byte)
-            f.write(self._partition_entries_as_bytes())
+            f.write(self.partitions.as_bytes())
 
             # move to secondary header location and write
             f.seek(self.geometry.backup_header_byte)
@@ -268,7 +201,7 @@ class Table:
 
             # write secondary partition table
             f.seek(self.geometry.backup_array_byte)
-            f.write(self._partition_entries_as_bytes())
+            f.write(self.partitions.as_bytes())
 
     def create_partition(
         self, name: str, size: int, guid: uuid.UUID, alignment: int = 8
@@ -279,36 +212,11 @@ class Table:
             guid,
             alignment,
         )
-        # find the first empty partition index
-        for idx, partition in enumerate(self.partition_entries):
-            if int.from_bytes(partition.partition_name.data, byteorder="little") == 0:
-                part.first_lba.data = self._first_lba()
-                last_lba = int(part.size / self.geometry.sector_size) + int.from_bytes(
-                    part.first_lba.data, byteorder="little"
-                )
-                part.last_lba.data = (last_lba).to_bytes(8, "little")
-                self.partition_entries[idx] = part
-                break
-
-    def _first_lba(self) -> bytes:
-        """Find the last LBA used by a partition"""
-        last_lba = 0
-        for partition in self.partition_entries:
-            last_lba_int = int.from_bytes(partition.last_lba.data, byteorder="little")
-            if last_lba_int > last_lba:
-                last_lba = last_lba_int
-        if last_lba == 0:
-            return (34).to_bytes(8, "little")
-        # @NOTE: this is NOT proper alignment
-        return (last_lba + 1).to_bytes(8, "little")
-
-    def _partition_entries_as_bytes(self):
-        parts = [x.as_bytes() for x in self.partition_entries]
-        return b"".join(parts)
+        self.partitions.add(part)
 
     def checksum_partitions(self, header: Header):
         """Checksum the partition entries"""
-        part_entry_bytes = self._partition_entries_as_bytes()
+        part_entry_bytes = self.partitions.as_bytes()
         header.partition_array_crc.data = binascii.crc32(part_entry_bytes).to_bytes(
             4, "little"
         )

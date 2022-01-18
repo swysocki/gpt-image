@@ -1,6 +1,7 @@
-from gpt_image.disk import Geometry, Disk
-import pytest
 from pathlib import Path
+
+import pytest
+from gpt_image.disk import Disk, Geometry
 
 
 def test_default_geometry():
@@ -29,7 +30,6 @@ def test_disk_new(tmp_path):
     image_name = tmp_path / "test.img"
     abs_path = image_name.resolve()
     disk = Disk(str(abs_path), image_size)
-    assert Path(disk.name).exists()
     assert disk.size == image_size
     assert disk.image_path == image_name
     assert image_name.stat().st_size == image_size
