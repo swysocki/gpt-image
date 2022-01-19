@@ -7,7 +7,7 @@ import uuid
 
 from gpt_image.disk import Disk, Geometry
 from gpt_image.entry import Entry
-from gpt_image.partition import Partition, PartitionEntry
+from gpt_image.partition import Partition, PartitionEntryArray
 
 
 class ProtectiveMBR:
@@ -39,7 +39,7 @@ class ProtectiveMBR:
             self.partition_size,
         ]
 
-    def as_bytes(self):
+    def as_bytes(self) -> bytes:
         """Get the Protective MBR as bytes
 
         Does not include the signature
@@ -132,16 +132,16 @@ class Table:
     directly used.
     """
 
-    def __init__(self, disk: Disk, sector_size: int = 512) -> None:
+    def __init__(self, disk: Disk, sector_size: int = 512):
         self.disk = disk
         self.geometry = disk.geometry
         self.protective_mbr = ProtectiveMBR(self.geometry)
         self.primary_header = Header(self.geometry)
         self.secondary_header = Header(self.geometry, is_backup=True)
 
-        self.partitions = PartitionEntry(self.geometry)
+        self.partitions = PartitionEntryArray(self.geometry)
 
-    def write(self):
+    def write(self) -> None:
         """Write the table to disk"""
         # calculate partition checksum and write to header
         self.checksum_partitions(self.primary_header)
@@ -176,7 +176,7 @@ class Table:
 
     def create_partition(
         self, name: str, size: int, guid: uuid.UUID, alignment: int = 8
-    ):
+    ) -> None:
         part = Partition(
             name,
             size,
@@ -185,14 +185,14 @@ class Table:
         )
         self.partitions.add(part)
 
-    def checksum_partitions(self, header: Header):
+    def checksum_partitions(self, header: Header) -> None:
         """Checksum the partition entries"""
         part_entry_bytes = self.partitions.as_bytes()
         header.partition_array_crc.data = binascii.crc32(part_entry_bytes).to_bytes(
             4, "little"
         )
 
-    def checksum_header(self, header: Header):
+    def checksum_header(self, header: Header) -> None:
         """Checksum the table header
 
         This CRC includes the partition checksum, and must be calculated
