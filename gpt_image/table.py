@@ -16,8 +16,10 @@ class ProtectiveMBR:
     Provides the bare minimum entries needed to represent a protective MBR.
     https://thestarman.pcministry.com/asm/mbr/PartTables.htm#pte
 
-
     """
+
+    PROTECTIVE_MBR_START = 446
+    DISK_SIGNATURE_START = 510
 
     def __init__(self, geometry: Geometry):
         self.boot_indictor = Entry(0, 1, 0)  # not bootable
@@ -151,9 +153,9 @@ class Table:
 
         with open(self.disk.image_path, "r+b") as f:
             # write protective MBR
-            f.seek(446)
+            f.seek(ProtectiveMBR.PROTECTIVE_MBR_START)
             f.write(self.protective_mbr.as_bytes())
-            f.seek(510)
+            f.seek(ProtectiveMBR.DISK_SIGNATURE_START)
             f.write(self.protective_mbr.signature.data)
 
             # write primary header
