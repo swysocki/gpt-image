@@ -40,12 +40,12 @@ class Partition:
           size: partition size in Bytes
         """
         # create an empty partition object
-        self.type_guid = Entry(0, 16, b"\x00" * 16)
-        self.partition_guid = Entry(16, 16, b"\x00" * 16)
-        self.first_lba = Entry(32, 8, b"\x00" * 8)
-        self.last_lba = Entry(40, 8, b"\x00" * 8)
-        self.attribute_flags = Entry(48, 8, b"\x00" * 8)
-        self.partition_name = Entry(56, 72, b"\x00" * 72)
+        self.type_guid = Entry(0, 16, 0)
+        self.partition_guid = Entry(16, 16, 0)
+        self.first_lba = Entry(32, 8, 0)
+        self.last_lba = Entry(40, 8, 0)
+        self.attribute_flags = Entry(48, 8, 0)
+        self.partition_name = Entry(56, 72, 0)
 
         # if name is set, this isn't an empty partition. Set relevant fields
         if name:

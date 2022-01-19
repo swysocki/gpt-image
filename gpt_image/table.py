@@ -4,27 +4,10 @@ Header information reference: https://en.wikipedia.org/wiki/GUID_Partition_Table
 """
 import binascii
 import uuid
-from dataclasses import dataclass
 
 from gpt_image.disk import Disk, Geometry
 from gpt_image.entry import Entry
 from gpt_image.partition import Partition, PartitionEntry
-
-
-@dataclass
-class Entry:
-    """Individual table entries
-
-    Creates a consistent structure for writing GPT table data to its
-    respective locations.  This is used for headers and partitions.
-
-    The data field only accepts bytes to simplify writing back to a buffer.
-    """
-
-    offset: int
-    length: int
-    data: bytes
-    # @TODO: make default data b"\x00" * length
 
 
 class ProtectiveMBR:
@@ -33,18 +16,18 @@ class ProtectiveMBR:
     Provides the bare minimum entries needed to represent a protective MBR.
     https://thestarman.pcministry.com/asm/mbr/PartTables.htm#pte
 
-
     """
 
+    PROTECTIVE_MBR_START = 446
+    DISK_SIGNATURE_START = 510
+
     def __init__(self, geometry: Geometry):
-        self.boot_indictor = Entry(0, 1, b"\x00")  # not bootable
-        self.start_chs = Entry(1, 3, b"\x00\x00\x00")  # ignore the start CHS
+        self.boot_indictor = Entry(0, 1, 0)  # not bootable
+        self.start_chs = Entry(1, 3, 0)  # ignore the start CHS
         self.partition_type = Entry(4, 1, b"\xEE")  # GPT partition type
-        self.end_chs = Entry(5, 3, b"\x00\x00\x00")  # ignore the end CHS
-        self.start_sector = Entry(
-            8, 4, geometry.primary_header_lba.to_bytes(4, "little")
-        )
-        self.partition_size = Entry(12, 4, geometry.total_sectors.to_bytes(4, "little"))
+        self.end_chs = Entry(5, 3, 0)  # ignore the end CHS
+        self.start_sector = Entry(8, 4, geometry.primary_header_lba)
+        self.partition_size = Entry(12, 4, geometry.total_sectors)
         self.signature = Entry(510, 4, b"\x55\xAA")
 
         self.mbr_fields = [
@@ -79,35 +62,23 @@ class Header:
     def __init__(self, geometry: Geometry, is_backup: bool = False):
         self.backup = is_backup
         self.geometry = geometry
-        # @NOTE: the offsets are not being used, at may be removed
         self.header_sig = Entry(0, 8, b"EFI PART")
         self.revision = Entry(8, 4, b"\x00\x00\x01\x00")
-        self.header_size = Entry(12, 4, (92).to_bytes(4, "little"))
-        self.header_crc = Entry(16, 4, (0).to_bytes(4, "little"))
-        self.reserved = Entry(20, 4, (0).to_bytes(4, "little"))
-        self.primary_header_lba = Entry(
-            24, 8, (self.geometry.primary_header_lba).to_bytes(8, "little")
-        )
-        self.secondary_header_lba = Entry(
-            32, 8, (self.geometry.backup_header_lba).to_bytes(8, "little")
-        )
-        self.partition_start_lba = Entry(
-            40, 8, (self.geometry.partition_start_lba).to_bytes(8, "little")
-        )
-        self.partition_last_lba = Entry(
-            48, 8, (self.geometry.partition_last_lba).to_bytes(8, "little")
-        )
-        # self.disk_guid = Entry(56, 16, uuid.uuid4().bytes_le)
-        self.disk_guid = Entry(
-            56, 16, uuid.UUID("B3D6E0E0-7378-4E9A-B0A8-503D8C58E536").bytes_le
-        )
-        self.partition_array_start = Entry(
-            72, 8, (self.geometry.primary_array_lba).to_bytes(8, "little")
-        )
-        self.partition_array_length = Entry(80, 4, (128).to_bytes(4, "little"))
-        self.partition_entry_size = Entry(84, 4, (128).to_bytes(4, "little"))
-        self.partition_array_crc = Entry(88, 4, (0).to_bytes(4, "little"))
-        self.reserved_padding = Entry(92, 420, b"\x00" * 420)
+        self.header_size = Entry(12, 4, 92)
+        self.header_crc = Entry(16, 4, 0)
+        self.reserved = Entry(20, 4, 0)
+        self.primary_header_lba = Entry(24, 8, self.geometry.primary_header_lba)
+
+        self.secondary_header_lba = Entry(32, 8, self.geometry.backup_header_lba)
+        self.partition_start_lba = Entry(40, 8, self.geometry.partition_start_lba)
+
+        self.partition_last_lba = Entry(48, 8, self.geometry.partition_last_lba)
+        self.disk_guid = Entry(56, 16, uuid.uuid4().bytes_le)
+        self.partition_array_start = Entry(72, 8, self.geometry.primary_array_lba)
+        self.partition_array_length = Entry(80, 4, 128)
+        self.partition_entry_size = Entry(84, 4, 128)
+        self.partition_array_crc = Entry(88, 4, 0)
+        self.reserved_padding = Entry(92, 420, 0)
         # the secondary header adjustments
         if self.backup:
             self.primary_header_lba.data, self.secondary_header_lba.data = (
@@ -182,9 +153,9 @@ class Table:
 
         with open(self.disk.image_path, "r+b") as f:
             # write protective MBR
-            f.seek(446)
+            f.seek(ProtectiveMBR.PROTECTIVE_MBR_START)
             f.write(self.protective_mbr.as_bytes())
-            f.seek(510)
+            f.seek(ProtectiveMBR.DISK_SIGNATURE_START)
             f.write(self.protective_mbr.signature.data)
 
             # write primary header
