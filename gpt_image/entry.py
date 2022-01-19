@@ -1,14 +1,24 @@
+from typing import Union
+
+
 class Entry:
-    def __init__(self, offset: int, length: int, data: bytes):
+    def __init__(self, offset: int, length: int, data: Union[str, bytes, int]):
         self.offset = offset
         self.length = length
-        self.data = data
+        assert type(data) in [str, int, bytes], "data must be of type str, int or bytes"
 
-    def int_to_bytes(self, number: int) -> None:
-        """Convert in to the proper byte length"""
-        self.data = (number).to_bytes(self.length, "little")
+        self.data = self._convert_data(data)
 
-    def str_to_bytes(self, string: str) -> None:
-        b_string = bytes(string, encoding="utf_16_le")
-        padded = b_string + bytes(self.length - len(b_string))
-        self.data = padded
+    def _convert_data(self, data: Union[str, bytes, int]) -> bytes:
+        """Convert incoming data to bytes
+
+        Convenience class that converts data to bytes of the correct length
+
+        """
+        if isinstance(data, int):
+            return (data).to_bytes(self.length, "little")
+        if isinstance(data, str):
+            b_string = bytes(data, encoding="utf_16_le")
+            padded = b_string + bytes(self.length - len(b_string))
+            return padded
+        return data
