@@ -5,9 +5,9 @@ Header information reference: https://en.wikipedia.org/wiki/GUID_Partition_Table
 import binascii
 import uuid
 
-from gpt_image.disk import Disk, Geometry
 from gpt_image.entry import Entry
-from gpt_image.partition import Partition, PartitionEntryArray
+from gpt_image.geometry import Geometry
+from gpt_image.partition import PartitionEntryArray
 
 
 class ProtectiveMBR:
@@ -20,6 +20,9 @@ class ProtectiveMBR:
 
     PROTECTIVE_MBR_START = 446
     DISK_SIGNATURE_START = 510
+    # @ NOTE: this is pretty confusing. Why note the offset in the Entry
+    # if it is not going to be used. We either use proper offsets or remove them
+    # from the Entry class?
 
     def __init__(self, geometry: Geometry):
         self.boot_indictor = Entry(0, 1, 0)  # not bootable
@@ -55,11 +58,11 @@ class Header:
     Each table has two GPT headers, primary and secondary (backup). The primary is
     written to LBA 1 and secondary is written to LBA -1. The GPT Headers contain
     various data including the locations of one another. Therefore two headers
-    are created for each table.
+    are created for each table.  The only common component is the disk GUID.
 
     """
 
-    def __init__(self, geometry: Geometry, is_backup: bool = False):
+    def __init__(self, geometry: Geometry, guid: uuid.UUID, is_backup: bool = False):
         self.backup = is_backup
         self.geometry = geometry
         self.header_sig = Entry(0, 8, b"EFI PART")
@@ -73,7 +76,7 @@ class Header:
         self.partition_start_lba = Entry(40, 8, self.geometry.partition_start_lba)
 
         self.partition_last_lba = Entry(48, 8, self.geometry.partition_last_lba)
-        self.disk_guid = Entry(56, 16, uuid.uuid4().bytes_le)
+        self.disk_guid = Entry(56, 16, guid.bytes_le)
         self.partition_array_start = Entry(72, 8, self.geometry.primary_array_lba)
         self.partition_array_length = Entry(80, 4, 128)
         self.partition_entry_size = Entry(84, 4, 128)
@@ -89,7 +92,7 @@ class Header:
                 8, "little"
             )
 
-        # header start byte relative the table itself, not the disk
+        # header start byte relative to the table itself, not the disk
         # primary will be 0 secondary will be LBA 32
         self.header_start_byte = 0
         self.partition_entry_start_byte = int(1 * self.geometry.sector_size)
@@ -125,24 +128,18 @@ class Header:
 
 
 class Table:
-    """GPT Partition Table Object
+    """GPT Partition Table Object"""
 
-    The Table class the meant to be used by the consumer.  The underlying
-    classes should be called through functions in this class and not
-    directly used.
-    """
-
-    def __init__(self, disk: Disk, sector_size: int = 512):
-        self.disk = disk
-        self.geometry = disk.geometry
+    def __init__(self, geometry: Geometry, sector_size: int = 512):
+        disk_guid = uuid.uuid4()
+        self.geometry = geometry
         self.protective_mbr = ProtectiveMBR(self.geometry)
-        self.primary_header = Header(self.geometry)
-        self.secondary_header = Header(self.geometry, is_backup=True)
+        self.primary_header = Header(self.geometry, disk_guid)
+        self.secondary_header = Header(self.geometry, disk_guid, is_backup=True)
 
         self.partitions = PartitionEntryArray(self.geometry)
 
-    def write(self) -> None:
-        """Write the table to disk"""
+    def update(self) -> None:
         # calculate partition checksum and write to header
         self.checksum_partitions(self.primary_header)
         self.checksum_partitions(self.secondary_header)
@@ -150,40 +147,6 @@ class Table:
         # calculate header checksum and write to header
         self.checksum_header(self.primary_header)
         self.checksum_header(self.secondary_header)
-
-        with open(self.disk.image_path, "r+b") as f:
-            # write protective MBR
-            f.seek(ProtectiveMBR.PROTECTIVE_MBR_START)
-            f.write(self.protective_mbr.as_bytes())
-            f.seek(ProtectiveMBR.DISK_SIGNATURE_START)
-            f.write(self.protective_mbr.signature.data)
-
-            # write primary header
-            f.seek(self.geometry.primary_header_byte)
-            f.write(self.primary_header.as_bytes())
-
-            # write primary partition table
-            f.seek(self.geometry.primary_array_byte)
-            f.write(self.partitions.as_bytes())
-
-            # move to secondary header location and write
-            f.seek(self.geometry.backup_header_byte)
-            f.write(self.secondary_header.as_bytes())
-
-            # write secondary partition table
-            f.seek(self.geometry.backup_array_byte)
-            f.write(self.partitions.as_bytes())
-
-    def create_partition(
-        self, name: str, size: int, guid: uuid.UUID, alignment: int = 8
-    ) -> None:
-        part = Partition(
-            name,
-            size,
-            guid,
-            alignment,
-        )
-        self.partitions.add(part)
 
     def checksum_partitions(self, header: Header) -> None:
         """Checksum the partition entries"""
