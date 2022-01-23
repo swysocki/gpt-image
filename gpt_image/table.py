@@ -127,7 +127,7 @@ class Header:
 class Table:
     """GPT Partition Table Object
 
-    The Table class the meant to be used by the consumer.  The underlying
+    The Table class is meant to be used by the consumer.  The underlying
     classes should be called through functions in this class and not
     directly used.
     """

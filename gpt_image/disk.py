@@ -4,7 +4,7 @@ import pathlib
 class Geometry:
     """Geometry of disk image
 
-    This is a convenience class that provides geometry calculations for 
+    This is a convenience class that provides geometry calculations for
 
     Attributes:
         sector_size: typically set to 512 bytes
@@ -50,20 +50,26 @@ class Disk:
     Attributes:
         image_path: file image path (absolute or relative)
         size: disk image size in bytes
-        geometry:
+        sector_size: disk sector size. This should not be changed, changes to the
+          layout should be done through the Partition alignment attribute
     """
 
     def __init__(
-        self, image_path: str, size: int = 0, fresh_disk: bool = False
+        self,
+        image_path: str,
+        size: int = 0,
+        sector_size: int = 512,
+        fresh_disk: bool = False,
     ) -> None:
         """Init Disk with a file path and size in bytes"""
         # @TODO: check that disk is large enough to contain all table data
         self.image_path = pathlib.Path(image_path)
         self.name = self.image_path.name
         self.size = size
+        self.sector_size = sector_size
         if self.image_path.exists():
             self.size = self.image_path.stat().st_size
-        self.geometry = Geometry(self.size)
+        self.geometry = Geometry(self.size, self.sector_size)
         # @NOTE: this is unnecessary
         if not self.image_path.exists() or fresh_disk:
             self.image_path.write_bytes(b"\x00" * self.geometry.total_bytes)
