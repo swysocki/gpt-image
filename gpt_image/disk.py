@@ -50,7 +50,7 @@ class Disk:
             f.seek(ProtectiveMBR.PROTECTIVE_MBR_START)
             f.write(self.table.protective_mbr.as_bytes())
             f.seek(ProtectiveMBR.DISK_SIGNATURE_START)
-            f.write(self.table.protective_mbr.as_bytes())
+            f.write(self.table.protective_mbr.signature.data)
 
     def create_partition(
         self, name: str, size: int, guid: uuid.UUID, alignment: int = 8

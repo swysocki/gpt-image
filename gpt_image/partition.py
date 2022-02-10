@@ -138,7 +138,7 @@ class PartitionEntryArray:
     def as_bytes(self) -> bytes:
         """Represent as bytes
 
-        Return the entire partition entrie list as bytes
+        Return the entire partition entry list as bytes
         """
         parts = [x.as_bytes() for x in self.entries]
         return b"".join(parts)
