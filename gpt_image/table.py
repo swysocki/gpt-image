@@ -5,9 +5,9 @@ Header information reference: https://en.wikipedia.org/wiki/GUID_Partition_Table
 import binascii
 import uuid
 
-from gpt_image.disk import Disk, Geometry
 from gpt_image.entry import Entry
-from gpt_image.partition import Partition, PartitionEntryArray
+from gpt_image.geometry import Geometry
+from gpt_image.partition import PartitionEntryArray
 
 
 class ProtectiveMBR:
@@ -132,15 +132,24 @@ class Table:
     directly used.
     """
 
-    def __init__(self, disk: Disk, sector_size: int = 512):
-        self.disk = disk
-        self.geometry = disk.geometry
+    def __init__(self, geometry: Geometry, sector_size: int = 512):
+        self.geometry = geometry
         self.protective_mbr = ProtectiveMBR(self.geometry)
         self.primary_header = Header(self.geometry)
         self.secondary_header = Header(self.geometry, is_backup=True)
 
         self.partitions = PartitionEntryArray(self.geometry)
 
+    def update(self) -> None:
+        # calculate partition checksum and write to header
+        self.checksum_partitions(self.primary_header)
+        self.checksum_partitions(self.secondary_header)
+
+        # calculate header checksum and write to header
+        self.checksum_header(self.primary_header)
+        self.checksum_header(self.secondary_header)
+
+    '''
     def write(self) -> None:
         """Write the table to disk"""
         # calculate partition checksum and write to header
@@ -176,7 +185,7 @@ class Table:
 
     def create_partition(
         self, name: str, size: int, guid: uuid.UUID, alignment: int = 8
-    ) -> None:
+    ) -> Partition:
         part = Partition(
             name,
             size,
@@ -184,6 +193,8 @@ class Table:
             alignment,
         )
         self.partitions.add(part)
+        return part
+    '''
 
     def checksum_partitions(self, header: Header) -> None:
         """Checksum the partition entries"""
