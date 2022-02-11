@@ -17,6 +17,7 @@ class Disk:
         size: disk image size in bytes
         sector_size: disk sector size. This should not be changed, changes to the
           layout should be done through the Partition alignment attribute
+        fresh_disk: boolean create a new disk
     """
 
     def __init__(
@@ -28,7 +29,6 @@ class Disk:
         fresh_disk: bool = False
     ) -> None:
         """Init Disk with a file path and size in bytes"""
-        # @TODO: check that disk is large enough to contain all table data
         self.image_path = pathlib.Path(image_path)
         self.name = self.image_path.name
         self.size = size
@@ -36,13 +36,18 @@ class Disk:
         self.geometry = Geometry(self.size, self.sector_size)
         self.table = Table(self.geometry)
         if fresh_disk:
-            self.create_disk()
+            self._create_disk()
         else:
             # @TODO: handle existing disk
             pass
 
-    def create_disk(self):
-        # Write Protective MBR as we won't change this when updating
+    def _create_disk(self):
+        """Create the disk image on Disk
+
+        Creates the basic image structure at the specified path. This zeros
+        the disk and writes the protective MBR.
+
+        """
         self.image_path.touch(exist_ok=False)
         with open(self.image_path, "r+b") as f:
             # zero entire disk
@@ -55,11 +60,31 @@ class Disk:
     def create_partition(
         self, name: str, size: int, guid: uuid.UUID, alignment: int = 8
     ) -> Partition:
+        """Create a GPT partition
+
+        Wraps the creation of a Partition object to allow it to be created from
+        the Disk class
+
+        Args:
+            name: partition name
+            size: partition size in Bytes
+            guid: partition GUID. generated if None
+            alignment: sector alignment
+        Returns:
+            Partition object
+        """
         part = Partition(name, size, guid, alignment)
         self.table.partitions.add(part)
+        # @TODO: returning this is probably unecessary
         return part
 
     def update_table(self):
+        """Update the GPT table
+
+        Writes the GPT header and partition tables to disk. Actions that
+        happen before this are not written to disk.
+
+        """
         self.table.update()
         with open(self.image_path, "r+b") as f:
             # write primary header

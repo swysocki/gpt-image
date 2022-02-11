@@ -29,6 +29,9 @@ class Partition:
         an empty partition object.  If "name" is set, we assume this is not
         an empty object and set the other values.
 
+        Empty partition objects are used as placeholders in the partition
+        entry array.
+
         Attributes:
           size: partition size in Bytes
         """
@@ -115,7 +118,7 @@ class PartitionEntryArray:
     def _get_last_lba(self, partition: Partition) -> int:
         """Calculate the last LBA of a new partition
 
-        @NOTE: this likely needs improvement
+        The last LBA will always be the -1 from the total partition LBA
 
         """
         assert (

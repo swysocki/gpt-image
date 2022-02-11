@@ -100,8 +100,7 @@ class Header:
             self.header_start_byte = int(32 * self.geometry.sector_size)
             self.partition_entry_start_byte = 0
 
-        # group the header fields to allow byte operations such as
-        # checksum
+        # group the header fields to allow byte operations such as checksum
         # this can be done with the `inspect` module OR just use bytearrays
         # and remove the Entry entirely
         self.header_fields = [
@@ -128,7 +127,11 @@ class Header:
 
 
 class Table:
-    """GPT Partition Table Object"""
+    """GPT Partition Table Object
+
+    The entire GPT table structure including the protective MBR,
+    GPT headers and partition tables
+    """
 
     def __init__(self, geometry: Geometry, sector_size: int = 512):
         disk_guid = uuid.uuid4()
@@ -149,7 +152,11 @@ class Table:
         self.checksum_header(self.secondary_header)
 
     def checksum_partitions(self, header: Header) -> None:
-        """Checksum the partition entries"""
+        """Checksum the partition entries
+
+        Args:
+            header: initialized GPT header object
+        """
         part_entry_bytes = self.partitions.as_bytes()
         header.partition_array_crc.data = binascii.crc32(part_entry_bytes).to_bytes(
             4, "little"
@@ -160,6 +167,9 @@ class Table:
 
         This CRC includes the partition checksum, and must be calculated
         after that has been written.
+
+        Args:
+            header: initialized GPT header object
         """
         # zero the old checksum before calculating
         header.header_crc.data = b"\x00" * 4
