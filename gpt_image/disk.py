@@ -1,8 +1,6 @@
 import pathlib
-import uuid
 
 from gpt_image.geometry import Geometry
-from gpt_image.partition import Partition
 from gpt_image.table import ProtectiveMBR, Table
 
 
@@ -56,27 +54,6 @@ class Disk:
             f.write(self.table.protective_mbr.as_bytes())
             f.seek(ProtectiveMBR.DISK_SIGNATURE_START)
             f.write(self.table.protective_mbr.signature.data)
-
-    def create_partition(
-        self, name: str, size: int, guid: uuid.UUID, alignment: int = 8
-    ) -> Partition:
-        """Create a GPT partition
-
-        Wraps the creation of a Partition object to allow it to be created from
-        the Disk class
-
-        Args:
-            name: partition name
-            size: partition size in Bytes
-            guid: partition GUID. generated if None
-            alignment: sector alignment
-        Returns:
-            Partition object
-        """
-        part = Partition(name, size, guid, alignment)
-        self.table.partitions.add(part)
-        # @TODO: returning this is probably unecessary
-        return part
 
     def update_table(self):
         """Update the GPT table
