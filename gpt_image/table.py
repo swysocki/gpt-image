@@ -133,7 +133,7 @@ class Table:
     GPT headers and partition tables
     """
 
-    def __init__(self, geometry: Geometry, sector_size: int = 512):
+    def __init__(self, geometry: Geometry):
         disk_guid = uuid.uuid4()
         self.geometry = geometry
         self.protective_mbr = ProtectiveMBR(self.geometry)

@@ -1,8 +1,8 @@
 import uuid
 from math import ceil
 
-from gpt_image.disk import Geometry
 from gpt_image.entry import Entry
+from gpt_image.geometry import Geometry
 
 
 class Partition:
