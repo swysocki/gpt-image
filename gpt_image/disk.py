@@ -88,7 +88,7 @@ class Disk:
             data: data to write to partition. only bytes supported
             partition: Partition object to write data to
             offset: byte offset for writing data. The default is 0 but can be set to
-                support RAW type partitions
+                support custom offsets
         """
         if not type(data) is bytes:
             raise ValueError(f"data must be of type bytes. found type: {type(data)}")
