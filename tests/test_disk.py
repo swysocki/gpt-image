@@ -39,9 +39,16 @@ def test_write_data_offset(new_image: Disk):
     new_image.table.partitions.add(part)
     new_image.update_table()
     new_image.write_data(BYTE_DATA, part, OFFSET)
+    new_image.write_data(BYTE_DATA, part, OFFSET + OFFSET)
     with open(new_image.image_path, "r+b") as f:
         f.seek(
             int.from_bytes(part.first_lba.data, "little") * new_image.sector_size
+            + OFFSET
+        )
+        assert f.read(4) == BYTE_DATA
+        f.seek(
+            int.from_bytes(part.first_lba.data, "little") * new_image.sector_size
+            + OFFSET
             + OFFSET
         )
         assert f.read(4) == BYTE_DATA
