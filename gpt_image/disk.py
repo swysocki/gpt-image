@@ -1,6 +1,7 @@
 import pathlib
 
 from gpt_image.geometry import Geometry
+from gpt_image.partition import Partition
 from gpt_image.table import ProtectiveMBR, Table
 
 
@@ -24,7 +25,7 @@ class Disk:
         size: int = 0,
         sector_size: int = 512,
         *,
-        fresh_disk: bool = False
+        fresh_disk: bool = False,
     ) -> None:
         """Init Disk with a file path and size in bytes"""
         self.image_path = pathlib.Path(image_path)
@@ -79,3 +80,22 @@ class Disk:
             # write secondary partition table
             f.seek(self.geometry.backup_array_byte)
             f.write(self.table.partitions.as_bytes())
+
+    def write_data(self, data: bytes, partition: Partition, offset: int = 0) -> None:
+        """Write data to disk
+
+        Args:
+            data: data to write to partition. only bytes supported
+            partition: Partition object to write data to
+            offset: byte offset for writing data. The default is 0 but can be set to
+                support custom offsets
+        """
+        if not type(data) is bytes:
+            raise ValueError(f"data must be of type bytes. found type: {type(data)}")
+
+        with open(self.image_path, "r+b") as f:
+            start_lba = int.from_bytes(partition.first_lba.data, "little")
+            start_byte = int(start_lba * self.sector_size)
+            with open(self.image_path, "r+b") as f:
+                f.seek(start_byte + offset)
+                f.write(data)
