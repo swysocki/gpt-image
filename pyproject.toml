@@ -7,5 +7,5 @@ build-backend = "setuptools.build_meta"
 
 [tool.semantic_release]
 branch = 'main'
-version_variable = 'gpt_image/__init__.py:__version__'
-build_command = 'python3 -m build'
+version_variable = 'setup.py:__version__'
+build_command = 'python3 -m pip install setuptools wheel build && python3 -m build'
