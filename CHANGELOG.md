@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.2.2 (2022-02-26)
+### Fix
+* Remove concurrency ([`7d3907d`](https://github.com/swysocki/gpt-image/commit/7d3907d604752c9bb3cee2d67e88d8bbaed37be9))
+
 ## v0.2.1 (2022-02-26)
 ### Fix
 * Add build tools to workflow ([`8590703`](https://github.com/swysocki/gpt-image/commit/859070354c00e7393d1d62892832f43fd184be37))
