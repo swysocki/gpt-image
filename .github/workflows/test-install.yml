@@ -17,7 +17,7 @@ jobs:
         python-version: "3.8"
     - name: Install dependencies
       run: |
-        python -m pip install setuptools wheel build
+        python3 -m pip install setuptools wheel build
     - name: test deps
       run: |
-        python -m build --help
+        python3 -m build --help
