@@ -8,7 +8,7 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    concurrency: release
+    # concurrency: release
 
     steps:
     - uses: actions/checkout@v2
