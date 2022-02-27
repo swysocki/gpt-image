@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.2.1 (2022-02-27)
+### Fix
+* Add partition tests ([#9](https://github.com/swysocki/gpt-image/issues/9)) ([`da41ad2`](https://github.com/swysocki/gpt-image/commit/da41ad271ea56a2c0bfb53937ddac4f40599509f))
+
 ## v0.2.0 (2022-02-26)
 ### Feature
 * Add semantic release ([#10](https://github.com/swysocki/gpt-image/issues/10)) ([`95177b2`](https://github.com/swysocki/gpt-image/commit/95177b21d1d45cb8bde0b736e332fb6452d3ddae))
