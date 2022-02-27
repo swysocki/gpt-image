@@ -89,8 +89,8 @@ class PartitionEntryArray:
             8, "little"
         )
         partition.last_lba.data = (self._get_last_lba(partition)).to_bytes(8, "little")
-        entry_indx = self._get_next_partition()
-        self.entries[entry_indx] = partition
+        entry_index = self._get_next_partition()
+        self.entries[entry_index] = partition
 
     def _get_first_lba(self, partition: Partition) -> int:
         """Calculate the first LBA of a new partition
