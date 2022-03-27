@@ -18,40 +18,52 @@ class ProtectiveMBR:
 
     """
 
-    PROTECTIVE_MBR_START = 446
-    DISK_SIGNATURE_START = 510
-    # @ NOTE: this is pretty confusing. Why note the offset in the Entry
-    # if it is not going to be used. We either use proper offsets or remove them
-    # from the Entry class?
-
     def __init__(self, geometry: Geometry):
-        self.boot_indictor = Entry(0, 1, 0)  # not bootable
-        self.start_chs = Entry(1, 3, 0)  # ignore the start CHS
-        self.partition_type = Entry(4, 1, b"\xEE")  # GPT partition type
-        self.end_chs = Entry(5, 3, 0)  # ignore the end CHS
-        self.start_sector = Entry(8, 4, geometry.primary_header_lba)
+        self._start_padding = Entry(0, 446, 0)  # padding before boot indicator
+        self.boot_indicator = Entry(446, 1, 0)  # not bootable
+        self.start_chs = Entry(447, 3, 0)  # ignore the start CHS
+        self.partition_type = Entry(450, 1, b"\xEE")  # GPT partition type
+        self.end_chs = Entry(451, 3, 0)  # ignore the end CHS
+        self.start_sector = Entry(454, 4, geometry.primary_header_lba)
         # size, minus the protective MBR sector. This only works if the
         # disk is under 2 TB
-        self.partition_size = Entry(12, 4, geometry.total_sectors - 1)
-        self.signature = Entry(510, 4, b"\x55\xAA")
+        self.partition_size = Entry(458, 4, geometry.total_sectors - 1)
+        self._end_padding = Entry(462, 48, 0)  # padding before signature
+        self.signature = Entry(510, 2, b"\x55\xAA")
 
-        self.mbr_fields = [
-            self.boot_indictor,
+
+    def as_bytes(self) -> bytes:
+        """Get the Protective MBR as bytes"""
+        pmbr_fields = [
+            self._start_padding,
+            self.boot_indicator,
             self.start_chs,
             self.partition_type,
             self.end_chs,
             self.start_sector,
             self.partition_size,
+            self._end_padding,
+            self.signature,
         ]
-
-    def as_bytes(self) -> bytes:
-        """Get the Protective MBR as bytes
-
-        Does not include the signature
-
-        """
-        byte_list = [x.data for x in self.mbr_fields]
+        byte_list = [x.data_bytes for x in pmbr_fields]
         return b"".join(byte_list)
+
+    def read(self, pmbr_data: bytes):
+        self.boot_indicator.data = pmbr_data[
+            self.boot_indicator.offset : self.boot_indicator.end
+        ]
+        self.start_chs.data = pmbr_data[self.start_chs.offset : self.start_chs.end]
+        self.partition_type.data = pmbr_data[
+            self.partition_type.offset : self.partition_type.end
+        ]
+        self.end_chs.data = pmbr_data[self.end_chs.offset : self.end_chs.end]
+        self.start_sector.data = pmbr_data[
+            self.start_sector.offset : self.start_sector.end
+        ]
+        self.partition_size.data = pmbr_data[
+            self.partition_size.offset : self.partition_size.end
+        ]
+        self.signature.data = pmbr_data[self.signature.offset : self.signature.end]
 
 
 class Header:
@@ -64,11 +76,21 @@ class Header:
 
     """
 
-    def __init__(self, geometry: Geometry, guid: uuid.UUID, is_backup: bool = False):
-        self.backup = is_backup
+    def __init__(
+        self,
+        geometry: Geometry,
+        guid: uuid.UUID = uuid.uuid4(),
+        is_backup: bool = False,
+    ):
         self.geometry = geometry
+        self.guid = guid
+        self.backup = is_backup
+
+        # all header values start with just offset and length, data is 0
         self.header_sig = Entry(0, 8, b"EFI PART")
+
         self.revision = Entry(8, 4, b"\x00\x00\x01\x00")
+
         self.header_size = Entry(12, 4, 92)
         self.header_crc = Entry(16, 4, 0)
         self.reserved = Entry(20, 4, 0)
@@ -78,13 +100,13 @@ class Header:
         self.partition_start_lba = Entry(40, 8, self.geometry.partition_start_lba)
 
         self.partition_last_lba = Entry(48, 8, self.geometry.partition_last_lba)
-        self.disk_guid = Entry(56, 16, guid.bytes_le)
+        self.disk_guid = Entry(56, 16, self.guid.bytes_le)
         self.partition_array_start = Entry(72, 8, self.geometry.primary_array_lba)
         self.partition_array_length = Entry(80, 4, 128)
         self.partition_entry_size = Entry(84, 4, 128)
         self.partition_array_crc = Entry(88, 4, 0)
         self.reserved_padding = Entry(92, 420, 0)
-        # the secondary header adjustments
+
         if self.backup:
             self.primary_header_lba.data, self.secondary_header_lba.data = (
                 self.secondary_header_lba.data,
@@ -102,10 +124,9 @@ class Header:
             self.header_start_byte = int(32 * self.geometry.sector_size)
             self.partition_entry_start_byte = 0
 
-        # group the header fields to allow byte operations such as checksum
-        # this can be done with the `inspect` module OR just use bytearrays
-        # and remove the Entry entirely
-        self.header_fields = [
+    def as_bytes(self) -> bytes:
+        """Return the header as bytes"""
+        header_fields = [
             self.header_sig,
             self.revision,
             self.header_size,
@@ -121,11 +142,38 @@ class Header:
             self.partition_entry_size,
             self.partition_array_crc,
         ]
-
-    def as_bytes(self) -> bytes:
-        """Return the header as bytes"""
-        byte_list = [x.data for x in self.header_fields]
+        byte_list = [x.data_bytes for x in header_fields]
         return b"".join(byte_list)
+
+    def read(self, header_bytes) -> None:
+        """Unmarshal bytes to Header object"""
+
+        def _to_int(field):
+            return int.from_bytes(header_bytes[field.offset : field.end], "little")
+
+        self.header_sig.data = header_bytes[
+            self.header_sig.offset : self.header_sig.offset + self.header_sig.length
+        ]
+        self.revision.data = header_bytes[
+            self.revision.offset : self.revision.offset + self.revision.length
+        ]
+        self.header_size.data = _to_int(self.header_size)
+        self.header_crc.data = _to_int(self.header_crc)
+        self.reserved.data = _to_int(self.reserved)
+        self.primary_header_lba.data = _to_int(self.primary_header_lba)
+        self.secondary_header_lba.data = _to_int(self.secondary_header_lba)
+        self.partition_start_lba.data = _to_int(self.partition_start_lba)
+        self.partition_last_lba.data = _to_int(self.partition_last_lba)
+        # stored as little endian bytes. This will need to be converted to display in
+        # human readable form
+        # uuid.UUID(bytes=self.disk_guid.data)
+        self.disk_guid.data = header_bytes[
+            self.disk_guid.offset : self.disk_guid.offset + self.disk_guid.length
+        ]
+        self.partition_array_start.data = _to_int(self.partition_array_start)
+        self.partition_array_length.data = _to_int(self.partition_array_length)
+        self.partition_entry_size.data = _to_int(self.partition_entry_size)
+        self.partition_array_crc.data = _to_int(self.partition_array_crc)
 
 
 class Table:
@@ -136,12 +184,10 @@ class Table:
     """
 
     def __init__(self, geometry: Geometry):
-        disk_guid = uuid.uuid4()
         self.geometry = geometry
         self.protective_mbr = ProtectiveMBR(self.geometry)
-        self.primary_header = Header(self.geometry, disk_guid)
-        self.secondary_header = Header(self.geometry, disk_guid, is_backup=True)
-
+        self.primary_header = Header(self.geometry)
+        self.secondary_header = Header(self.geometry, is_backup=True)
         self.partitions = PartitionEntryArray(self.geometry)
 
     def update(self) -> None:
@@ -160,9 +206,7 @@ class Table:
             header: initialized GPT header object
         """
         part_entry_bytes = self.partitions.as_bytes()
-        header.partition_array_crc.data = binascii.crc32(part_entry_bytes).to_bytes(
-            4, "little"
-        )
+        header.partition_array_crc.data = binascii.crc32(part_entry_bytes)
 
     def checksum_header(self, header: Header) -> None:
         """Checksum the table header
@@ -174,5 +218,5 @@ class Table:
             header: initialized GPT header object
         """
         # zero the old checksum before calculating
-        header.header_crc.data = b"\x00" * 4
-        header.header_crc.data = binascii.crc32(header.as_bytes()).to_bytes(4, "little")
+        header.header_crc.data = 0
+        header.header_crc.data = binascii.crc32(header.as_bytes())

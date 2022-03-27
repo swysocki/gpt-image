@@ -13,18 +13,14 @@ This is useful for creating a disk image on SD Cards or embedded devices.
 import gpt_image
 
 # create a new, 8 MB disk, size is in bytes
-disk = gpt_image.disk.Disk("disk-image.raw", 8 * 1024 * 1024, fresh_disk=True)
+disk = gpt_image.disk.Disk("disk-image.raw")
+disk.create(8 * 1024 * 1024)
 
 # create a 2MB partition, default is a Linux partition
 partition = gpt_image.partition.Partition("partition1", 2 * 1024 * 1024, uuid.uuid4())
 
 # add the partition to disk
 disk.table.partitions.add(partition)
-disk.update_table()
-
-# write data to disk, data must be in bytes
-with open("binary_data.bin", "r+b") as f:
-    data = f.read()
-    disk.write_data(data, partition)
+disk.write()
 
 ```
