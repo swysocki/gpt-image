@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.2.2 (2022-04-03)
+### Fix
+* Adjust pmbr partition size ([#13](https://github.com/swysocki/gpt-image/issues/13)) ([`379d615`](https://github.com/swysocki/gpt-image/commit/379d615093451783643a7ec665c98f12ff907927))
+
 ## v0.2.1 (2022-02-27)
 ### Fix
 * Add partition tests ([#9](https://github.com/swysocki/gpt-image/issues/9)) ([`da41ad2`](https://github.com/swysocki/gpt-image/commit/da41ad271ea56a2c0bfb53937ddac4f40599509f))
