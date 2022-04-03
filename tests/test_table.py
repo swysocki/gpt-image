@@ -19,7 +19,7 @@ def test_protective_mbr_init(new_geometry):
     pmbr_bytes = pmbr.as_bytes()
     assert pmbr_bytes[4:5] == b"\xEE"
     assert pmbr_bytes[8:12] == geo.primary_header_lba.to_bytes(4, "little")
-    assert pmbr_bytes[12:16] == geo.total_sectors.to_bytes(4, "little")
+    assert pmbr_bytes[12:16] == (geo.total_sectors - 1).to_bytes(4, "little")
 
 
 def test_header_init_primary(new_geometry):

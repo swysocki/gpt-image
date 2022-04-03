@@ -30,7 +30,9 @@ class ProtectiveMBR:
         self.partition_type = Entry(4, 1, b"\xEE")  # GPT partition type
         self.end_chs = Entry(5, 3, 0)  # ignore the end CHS
         self.start_sector = Entry(8, 4, geometry.primary_header_lba)
-        self.partition_size = Entry(12, 4, geometry.total_sectors)
+        # size, minus the protective MBR sector. This only works if the
+        # disk is under 2 TB
+        self.partition_size = Entry(12, 4, geometry.total_sectors - 1)
         self.signature = Entry(510, 4, b"\x55\xAA")
 
         self.mbr_fields = [
