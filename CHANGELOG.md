@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.3.0 (2022-05-07)
+### Feature
+* Read existing disk ([#14](https://github.com/swysocki/gpt-image/issues/14)) ([`ed83cb0`](https://github.com/swysocki/gpt-image/commit/ed83cb06efcdcdad2eee6be6930c8027565823b0))
+
 ## v0.2.2 (2022-04-03)
 ### Fix
 * Adjust pmbr partition size ([#13](https://github.com/swysocki/gpt-image/issues/13)) ([`379d615`](https://github.com/swysocki/gpt-image/commit/379d615093451783643a7ec665c98f12ff907927))
