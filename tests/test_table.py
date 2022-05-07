@@ -1,5 +1,4 @@
 import uuid
-from os import wait
 
 import pytest
 from gpt_image.geometry import Geometry

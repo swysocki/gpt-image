@@ -31,7 +31,6 @@ class ProtectiveMBR:
         self._end_padding = Entry(462, 48, 0)  # padding before signature
         self.signature = Entry(510, 2, b"\x55\xAA")
 
-
     def as_bytes(self) -> bytes:
         """Get the Protective MBR as bytes"""
         pmbr_fields = [
