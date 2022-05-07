@@ -8,6 +8,8 @@ class Geometry:
         total_bytes: disk size in bytes
         total_sectors: number of sectors on the disk
         total_lba: number of logical blocks on the disk
+        header_length: 92 bytes
+        array_length: partition array length in bytes (128*128)
         partition_start_lba: logical block where the partitions start
         partition_last_lba: logical block where the partitions end
         primary_header_lba: logical block location of primary header
@@ -16,8 +18,8 @@ class Geometry:
         primary_array_byte: byte where the primary partition array starts
         backup_header_lba: logical block where the backup header starts
         backup_header_byte: byte where the backup header starts
-        backup_header_array_lba: logical block where backup partition array starts
-        backup_header_array_byte: byte where the backup partition array starts
+        backup_array_lba: logical block where backup partition array starts
+        backup_array_byte: byte where the backup partition array starts
     """
 
     def __init__(self, size: int, sector_size: int = 512) -> None:
@@ -26,6 +28,8 @@ class Geometry:
         self.total_bytes = size
         self.total_sectors = int(size / self.sector_size)
         self.total_lba = int(size / self.sector_size)
+        self.header_length = 92
+        self.array_length = 128 * 128
         self.partition_start_lba = 34
         self.partition_last_lba = int(self.total_lba - 34)
         self.primary_header_lba = 1
