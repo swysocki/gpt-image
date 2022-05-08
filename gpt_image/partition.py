@@ -1,6 +1,6 @@
 import uuid
 from math import ceil
-from typing import List
+from typing import List, Union
 
 from gpt_image.entry import Entry
 from gpt_image.geometry import Geometry
@@ -21,7 +21,7 @@ class Partition:
         self,
         name: str = "",
         size: int = 0,
-        partition_guid: uuid.UUID = "",
+        partition_guid: Union[None, uuid.UUID] = None,
         alignment: int = 8,
     ):
         """Initialize Partition Object
