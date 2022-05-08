@@ -41,7 +41,7 @@ def test_add():
 
 def test_unmarshal():
     part = Partition(PART_NAME, 4 * 1024)
-    part_b = part.as_bytes()
+    part_b = part.byte_structure
 
     part2 = Partition()
     part2.read(part_b)

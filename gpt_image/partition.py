@@ -57,7 +57,9 @@ class Partition:
         self.alignment = alignment
         self.size = size
 
-        self.partition_fields = [
+    @property
+    def byte_structure(self) -> bytes:
+        part_fields = [
             self.type_guid,
             self.partition_guid,
             self.first_lba,
@@ -65,10 +67,7 @@ class Partition:
             self.attribute_flags,
             self.partition_name,
         ]
-
-    def as_bytes(self) -> bytes:
-        """Return the partition as bytes"""
-        byte_list = [x.data_bytes for x in self.partition_fields]
+        byte_list = [x.data_bytes for x in part_fields]
         return b"".join(byte_list)
 
     def read(self, partition_bytes):
@@ -158,12 +157,10 @@ class PartitionEntryArray:
         f_lba = int(partition.first_lba.data)
         return (f_lba + lba) - 1
 
-    def as_bytes(self) -> bytes:
-        """Represent as bytes
-
-        Return the entire partition entry list as bytes
-        """
-        parts = [x.as_bytes() for x in self.entries]
+    @property
+    def byte_structure(self) -> bytes:
+        """Convert the Partition Array to its byte structure"""
+        parts = [x.byte_structure for x in self.entries]
         part_bytes = b"".join(parts)
         # pad the rest with zeros
         padded = part_bytes + b"\x00" * (

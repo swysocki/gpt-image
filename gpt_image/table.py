@@ -31,8 +31,9 @@ class ProtectiveMBR:
         self._end_padding = Entry(462, 48, 0)  # padding before signature
         self.signature = Entry(510, 2, b"\x55\xAA")
 
-    def as_bytes(self) -> bytes:
-        """Get the Protective MBR as bytes"""
+    @property
+    def byte_structure(self) -> bytes:
+        """Convert Protective MBR to its byte structure"""
         pmbr_fields = [
             self._start_padding,
             self.boot_indicator,
@@ -123,8 +124,9 @@ class Header:
             self.header_start_byte = int(32 * self.geometry.sector_size)
             self.partition_entry_start_byte = 0
 
-    def as_bytes(self) -> bytes:
-        """Return the header as bytes"""
+    @property
+    def byte_structure(self) -> bytes:
+        """Convert the Header object to its byte structure"""
         header_fields = [
             self.header_sig,
             self.revision,
@@ -204,7 +206,7 @@ class Table:
         Args:
             header: initialized GPT header object
         """
-        part_entry_bytes = self.partitions.as_bytes()
+        part_entry_bytes = self.partitions.byte_structure
         header.partition_array_crc.data = binascii.crc32(part_entry_bytes)
 
     def checksum_header(self, header: Header) -> None:
@@ -218,4 +220,4 @@ class Table:
         """
         # zero the old checksum before calculating
         header.header_crc.data = 0
-        header.header_crc.data = binascii.crc32(header.as_bytes())
+        header.header_crc.data = binascii.crc32(header.byte_structure)

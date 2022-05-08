@@ -84,7 +84,7 @@ class Disk:
             # zero entire disk
             f.write(b"\x00" * self.size)
             f.seek(0)
-            f.write(self.table.protective_mbr.as_bytes())
+            f.write(self.table.protective_mbr.byte_structure)
         self.write()
 
     def write(self):
@@ -98,19 +98,19 @@ class Disk:
         with open(self.image_path, "r+b") as f:
             # write primary header
             f.seek(self.geometry.primary_header_byte)
-            f.write(self.table.primary_header.as_bytes())
+            f.write(self.table.primary_header.byte_structure)
 
             # write primary partition table
             f.seek(self.geometry.primary_array_byte)
-            f.write(self.table.partitions.as_bytes())
+            f.write(self.table.partitions.byte_structure)
 
             # move to secondary header location and write
             f.seek(self.geometry.backup_header_byte)
-            f.write(self.table.secondary_header.as_bytes())
+            f.write(self.table.secondary_header.byte_structure)
 
             # write secondary partition table
             f.seek(self.geometry.backup_array_byte)
-            f.write(self.table.partitions.as_bytes())
+            f.write(self.table.partitions.byte_structure)
 
     def write_data(self, data: bytes, partition: Partition, offset: int = 0) -> None:
         # @NOTE: this isn't a GPT function. Writing data should be outside the
