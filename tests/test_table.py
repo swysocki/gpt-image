@@ -15,8 +15,8 @@ def new_geometry():
 def test_protective_mbr_init(new_geometry):
     geo = new_geometry
     pmbr = ProtectiveMBR(geo)
-    assert type(pmbr.as_bytes()) == bytes
-    pmbr_bytes = pmbr.as_bytes()
+    assert type(pmbr.byte_structure) == bytes
+    pmbr_bytes = pmbr.byte_structure
     assert pmbr_bytes[pmbr.partition_type.offset : pmbr.partition_type.end] == b"\xEE"
     assert pmbr_bytes[
         pmbr.start_sector.offset : pmbr.start_sector.end
@@ -30,7 +30,7 @@ def test_proctective_mbr_read(new_geometry):
     pmbr = ProtectiveMBR(new_geometry)
     # change partition type to test it's read back properly
     pmbr.partition_type.data = b"\xFF"
-    pmbr_b = pmbr.as_bytes()
+    pmbr_b = pmbr.byte_structure
     new_pmbr = ProtectiveMBR(new_geometry)
     new_pmbr.read(pmbr_b)
     assert new_pmbr.partition_type.data == b"\xFF"
@@ -58,7 +58,7 @@ def test_header_init_backup(new_geometry):
 
 def test_header_read(new_geometry):
     head = Header(new_geometry, uuid.uuid4())
-    head_b = head.as_bytes()
+    head_b = head.byte_structure
 
     head_ex = Header(new_geometry)
     head_ex.read(head_b)
