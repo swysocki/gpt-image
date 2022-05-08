@@ -2,6 +2,11 @@
 
 <!--next-version-placeholder-->
 
+## v0.3.1 (2022-05-08)
+### Fix
+* Allow guid to be None or UUID type ([`c2f15c7`](https://github.com/swysocki/gpt-image/commit/c2f15c7c12ca5a66023af8b9fcf5db241f2d70aa))
+* Add marshal function ([`a7e06fd`](https://github.com/swysocki/gpt-image/commit/a7e06fd4fd80b0c8717da9803250d5eeb46969db))
+
 ## v0.3.0 (2022-05-07)
 ### Feature
 * Read existing disk ([#14](https://github.com/swysocki/gpt-image/issues/14)) ([`ed83cb0`](https://github.com/swysocki/gpt-image/commit/ed83cb06efcdcdad2eee6be6930c8027565823b0))
