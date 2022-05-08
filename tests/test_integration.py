@@ -6,7 +6,7 @@ from gpt_image.partition import Partition
 
 
 def test_e2e():
-    FILE_NAME = "test-disk.raw"
+    FILE_NAME = "tests/testdata/test-disk.raw"
     # cleanup old test file
     if os.path.isfile(FILE_NAME):
         os.remove(FILE_NAME)
