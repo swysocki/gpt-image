@@ -6,6 +6,10 @@ from gpt_image.entry import Entry
 from gpt_image.geometry import Geometry
 
 
+class PartitionEntryError(Exception):
+    pass
+
+
 class Partition:
     """Partition class represents a GPT partition
 
@@ -148,9 +152,8 @@ class PartitionEntryArray:
         The last LBA will always be the -1 from the total partition LBA
 
         """
-        assert (
-            partition.size > self._geometry.sector_size
-        ), "Partition smaller than sector size"
+        if partition.size < self._geometry.sector_size:
+            raise PartitionEntryError("Partition smaller than sector size")
 
         # round the LBA up to ensure our LBA will hold the partition
         lba = int(ceil(partition.size / self._geometry.sector_size))
