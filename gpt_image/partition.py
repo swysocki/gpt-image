@@ -70,7 +70,7 @@ class Partition:
         byte_list = [x.data_bytes for x in part_fields]
         return b"".join(byte_list)
 
-    def read(self, partition_bytes):
+    def read(self, partition_bytes: bytes):
         """Unmarshal bytes to Partition Object"""
         self.type_guid.data = partition_bytes[
             self.type_guid.offset : self.type_guid.offset + self.type_guid.length

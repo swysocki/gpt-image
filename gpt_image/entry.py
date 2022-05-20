@@ -25,7 +25,7 @@ class Entry:
         return self._data
 
     @data.setter
-    def data(self, value):
+    def data(self, value: Union[str, bytes, int]):
         if type(value) not in Entry.valid_types:
             raise ValueError(f"invalid entry type: {type(value)}")
         # @TODO: handle too large of integer
@@ -43,6 +43,4 @@ class Entry:
             return struct.pack(
                 f"<{str(self.length)}s", bytes(self.data, encoding="ascii")
             )
-        if isinstance(self.data, bytes):
-            return struct.pack(f"<{str(self.length)}s", self.data)
-        raise ValueError("cannot convert value to bytes")
+        return struct.pack(f"<{str(self.length)}s", self.data)

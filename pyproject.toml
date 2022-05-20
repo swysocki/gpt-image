@@ -9,3 +9,6 @@ build-backend = "setuptools.build_meta"
 branch = 'main'
 version_variable = 'setup.py:__version__'
 build_command = 'python3 -m pip install setuptools wheel build && python3 -m build'
+
+[tool.pyright]
+ignore = ["tests"]

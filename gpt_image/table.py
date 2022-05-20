@@ -146,10 +146,10 @@ class Header:
         byte_list = [x.data_bytes for x in header_fields]
         return b"".join(byte_list)
 
-    def read(self, header_bytes) -> None:
+    def read(self, header_bytes: bytes) -> None:
         """Unmarshal bytes to Header object"""
 
-        def _to_int(field):
+        def _to_int(field: Entry):
             return int.from_bytes(header_bytes[field.offset : field.end], "little")
 
         self.header_sig.data = header_bytes[
