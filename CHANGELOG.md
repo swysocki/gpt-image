@@ -2,6 +2,11 @@
 
 <!--next-version-placeholder-->
 
+## v0.3.2 (2022-05-21)
+### Fix
+* Custom partition error class ([`bf2cdaa`](https://github.com/swysocki/gpt-image/commit/bf2cdaa514c8a1ff44d7df7c2e22d09ab4e9c1a1))
+* Add missing types ([`f348697`](https://github.com/swysocki/gpt-image/commit/f348697dd7300a12e60d761874819f32b720eb0c))
+
 ## v0.3.1 (2022-05-08)
 ### Fix
 * Allow guid to be None or UUID type ([`c2f15c7`](https://github.com/swysocki/gpt-image/commit/c2f15c7c12ca5a66023af8b9fcf5db241f2d70aa))
