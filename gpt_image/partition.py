@@ -1,5 +1,7 @@
 import uuid
+from enum import Enum
 from math import ceil
+from sys import byteorder
 from typing import List, Union
 
 from gpt_image.entry import Entry
@@ -8,6 +10,22 @@ from gpt_image.geometry import Geometry
 
 class PartitionEntryError(Exception):
     pass
+
+
+class PartitionAttribute(Enum):
+    """Supported partition attribute settings
+
+    https://en.wikipedia.org/wiki/GUID_Partition_Table#Partition_entries_(LBA_2-33)
+
+
+    The attribute field is 8 bytes with the last 2 bytes used for basic data. This
+    field sets a bit in the last 2 bytes.
+    """
+    NONE = 0
+    READ_ONLY = 60
+    SHADOW_COPY = 61
+    HIDDEN = 62
+    NO_DRIVE_LETTER = 63
 
 
 class Partition:
@@ -45,8 +63,8 @@ class Partition:
         self.partition_guid = Entry(16, 16, 0)
         self.first_lba = Entry(32, 8, 0)
         self.last_lba = Entry(40, 8, 0)
-        self.attribute_flags = Entry(48, 8, 0)
         self.partition_name = Entry(56, 72, 0)
+        self._attribute_flags = Entry(48, 8, 0)
         # if name is set, this isn't an empty partition. Set relevant fields
         # @TODO: don't base an empty partition off of the name attribute
         if name:
@@ -62,6 +80,24 @@ class Partition:
         self.size = size
 
     @property
+    def attribute_flags(self):
+        return self._attribute_flags
+
+    @attribute_flags.setter
+    def attribute_flags(self, flag: PartitionAttribute):
+        """Set the partition attribute flag
+
+        Sets the bit corresponding to the PartitionAttribute Class.
+        If the PartitionAttribute.NONE value is set, this clears all flags
+
+        """
+        if flag.value == 0:
+            self._attribute_flags.data = 0
+        else:
+            attr_int = int.from_bytes(self._attribute_flags.data_bytes, byteorder="little")
+            self._attribute_flags = Entry(48, 8, attr_int | ( 1 << flag.value))
+
+    @property
     def byte_structure(self) -> bytes:
         part_fields = [
             self.type_guid,
@@ -73,6 +109,12 @@ class Partition:
         ]
         byte_list = [x.data_bytes for x in part_fields]
         return b"".join(byte_list)
+
+    def set_attribute(self, position: int):
+        if position > 63:
+            raise PartitionEntryError(f"invalid attribute position error: {position}")
+        attr_int = int.from_bytes(self.attribute_flags.data_bytes, byteorder="little")
+        self.attribute_flags.data = attr_int | (1 << position)
 
     def read(self, partition_bytes: bytes):
         """Unmarshal bytes to Partition Object"""

@@ -2,7 +2,8 @@ import struct
 import uuid
 
 from gpt_image.geometry import Geometry
-from gpt_image.partition import Partition, PartitionEntryArray
+from gpt_image.partition import (Partition, PartitionAttribute,
+                                 PartitionEntryArray)
 
 PART_NAME = "test-part"
 
@@ -29,6 +30,19 @@ def test_partition_init_real():
 
     assert part.size == 2 * 1024
 
+def test_attribute_set():
+    part = Partition(PART_NAME, 2*1024)
+    part.attribute_flags = PartitionAttribute.HIDDEN
+    assert part.attribute_flags.data_bytes == (b"\x00" *7) + b"@"
+    part.attribute_flags = PartitionAttribute.READ_ONLY
+    assert part.attribute_flags.data_bytes == (b"\x00" *7) + b"P"
+
+def test_attribute_clear():
+    part = Partition(PART_NAME, 2*1024)
+    part.attribute_flags = PartitionAttribute.HIDDEN
+    assert part.attribute_flags.data_bytes == (b"\x00" *7) + b"@"
+    part.attribute_flags = PartitionAttribute.NONE
+    assert part.attribute_flags.data_bytes == b"\x00" * 8
 
 def test_add():
     geo = Geometry(8 * 1024 * 1024)
