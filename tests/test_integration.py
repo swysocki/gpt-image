@@ -1,12 +1,12 @@
-import uuid
-import sys
 import json
-import pytest
 import shutil
 import subprocess
+import sys
+import uuid
 
+import pytest
 from gpt_image import disk
-from gpt_image.partition import Partition
+from gpt_image.partition import Partition, PartitionAttribute
 
 STATIC_UUID = "4133e7fe-0be9-4097-b617-e3373fa0535e"
 DISK_SIZE = 2 * 1024 * 1024  # (2MB)
@@ -24,7 +24,7 @@ def create_image(tmp_path):
     new_disk = disk.Disk(image)
     new_disk.create(DISK_SIZE)
     part1 = Partition(PART1_NAME, PART1_SIZE, uuid.uuid4())
-
+    part1.attribute_flags = PartitionAttribute.HIDDEN
     new_disk.table.partitions.add(part1)
 
     part2 = Partition(PART2_NAME, PART2_SIZE, uuid.UUID(STATIC_UUID))
@@ -56,7 +56,7 @@ def test_sfdisk(create_image):
     assert (
         partitions[0].get("start") == 40
     )  # 34 is the first usable but alignment is 8, so 40 is the start
-
+    assert partitions[0].get("attrs") == "GUID:62"
     assert partitions[1].get("name") == PART2_NAME
     assert partitions[1].get("size") == (PART2_SIZE / 512)
     assert partitions[1].get("start") == 48
