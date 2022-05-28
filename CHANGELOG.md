@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.4.0 (2022-05-28)
+### Feature
+* Allow setting partition attributes ([`fa73bde`](https://github.com/swysocki/gpt-image/commit/fa73bde27921561382613e6ed7ed1df88eb85458))
+
 ## v0.3.2 (2022-05-21)
 ### Fix
 * Custom partition error class ([`bf2cdaa`](https://github.com/swysocki/gpt-image/commit/bf2cdaa514c8a1ff44d7df7c2e22d09ab4e9c1a1))
