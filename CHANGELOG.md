@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.4.1 (2022-07-09)
+### Fix
+* Use EFI spec mnemonics for attribute names ([`0e62e24`](https://github.com/swysocki/gpt-image/commit/0e62e24c1d80939068c7d4fd8c5dc703fbd99eb9))
+
 ## v0.4.0 (2022-05-28)
 ### Feature
 * Allow setting partition attributes ([`fa73bde`](https://github.com/swysocki/gpt-image/commit/fa73bde27921561382613e6ed7ed1df88eb85458))
