@@ -1,7 +1,6 @@
 import uuid
 from enum import Enum
 from math import ceil
-from sys import byteorder
 from typing import List, Union
 
 from gpt_image.entry import Entry
@@ -21,6 +20,7 @@ class PartitionAttribute(Enum):
     The attribute field is 8 bytes with the last 2 bytes used for basic data. This
     field sets a bit in the last 2 bytes.
     """
+
     NONE = 0
     READ_ONLY = 60
     SHADOW_COPY = 61
@@ -94,8 +94,10 @@ class Partition:
         if flag.value == 0:
             self._attribute_flags.data = 0
         else:
-            attr_int = int.from_bytes(self._attribute_flags.data_bytes, byteorder="little")
-            self._attribute_flags = Entry(48, 8, attr_int | ( 1 << flag.value))
+            attr_int = int.from_bytes(
+                self._attribute_flags.data_bytes, byteorder="little"
+            )
+            self._attribute_flags = Entry(48, 8, attr_int | (1 << flag.value))
 
     @property
     def byte_structure(self) -> bytes:

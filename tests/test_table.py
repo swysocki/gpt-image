@@ -2,6 +2,7 @@ import uuid
 
 import pytest
 from gpt_image.geometry import Geometry
+from gpt_image.partition import Partition
 from gpt_image.table import Header, ProtectiveMBR, Table
 
 DISK_SIZE = 2 * 1024 * 1024  # 2 MB disk
@@ -102,3 +103,14 @@ def test_update(new_geometry):
     assert table.secondary_header.header_crc32 != b"\x00" * 4
     assert table.primary_header.partition_entry_array_crc32 != b"\x00" * 4
     assert table.secondary_header.partition_entry_array_crc32 != b"\x00" * 4
+
+
+def test_partition_count(new_geometry):
+    table = Table(new_geometry)
+    assert table.primary_header.number_of_partition_entries.data == 0
+    assert table.secondary_header.number_of_partition_entries.data == 0
+    p1 = Partition("test-part1", 2 * 1024, uuid.uuid4())
+    table.partitions.add(p1)
+    table.update()
+    assert table.primary_header.number_of_partition_entries.data == 1
+    assert table.secondary_header.number_of_partition_entries.data == 1
