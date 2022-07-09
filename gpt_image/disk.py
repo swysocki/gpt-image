@@ -37,7 +37,7 @@ class Disk:
             + self.geometry.header_length
         ]
         backup_header_b = disk_bytes[
-            self.geometry.backup_header_byte : self.geometry.backup_header_byte
+            self.geometry.alternate_header_byte : self.geometry.alternate_header_byte
             + self.geometry.header_length
         ]
         self.table.primary_header = Header(self.geometry)
@@ -47,11 +47,11 @@ class Disk:
         # read the partition tables
         primary_part_table_b = disk_bytes[
             self.geometry.primary_array_byte : self.geometry.primary_array_byte
-            + self.geometry.array_length
+            + self.geometry.array_max_length
         ]
         backup_part_table_b = disk_bytes[
-            self.geometry.backup_array_byte : self.geometry.backup_array_byte
-            + self.geometry.array_length
+            self.geometry.alternate_array_byte : self.geometry.alternate_array_byte
+            + self.geometry.array_max_length
         ]
         if primary_part_table_b != backup_part_table_b:
             raise TableReadError("primary and backup table do not match")
@@ -105,11 +105,11 @@ class Disk:
             f.write(self.table.partitions.byte_structure)
 
             # move to secondary header location and write
-            f.seek(self.geometry.backup_header_byte)
+            f.seek(self.geometry.alternate_header_byte)
             f.write(self.table.secondary_header.byte_structure)
 
             # write secondary partition table
-            f.seek(self.geometry.backup_array_byte)
+            f.seek(self.geometry.alternate_array_byte)
             f.write(self.table.partitions.byte_structure)
 
     def write_data(self, data: bytes, partition: Partition, offset: int = 0) -> None:

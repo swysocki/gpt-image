@@ -24,7 +24,7 @@ class ProtectiveMBR:
         self.start_chs = Entry(447, 3, 0)  # ignore the start CHS
         self.partition_type = Entry(450, 1, b"\xEE")  # GPT partition type
         self.end_chs = Entry(451, 3, 0)  # ignore the end CHS
-        self.start_sector = Entry(454, 4, geometry.primary_header_lba)
+        self.start_sector = Entry(454, 4, geometry.my_lba)
         # size, minus the protective MBR sector. This only works if the
         # disk is under 2 TB
         self.partition_size = Entry(458, 4, geometry.total_sectors - 1)
@@ -87,32 +87,32 @@ class Header:
         self.backup = is_backup
 
         # all header values start with just offset and length, data is 0
-        self.header_sig = Entry(0, 8, b"EFI PART")
+        self.signature = Entry(0, 8, b"EFI PART")
 
         self.revision = Entry(8, 4, b"\x00\x00\x01\x00")
 
         self.header_size = Entry(12, 4, 92)
-        self.header_crc = Entry(16, 4, 0)
+        self.header_crc32 = Entry(16, 4, 0)
         self.reserved = Entry(20, 4, 0)
-        self.primary_header_lba = Entry(24, 8, self.geometry.primary_header_lba)
+        self.my_lba = Entry(24, 8, self.geometry.my_lba)
 
-        self.secondary_header_lba = Entry(32, 8, self.geometry.backup_header_lba)
-        self.partition_start_lba = Entry(40, 8, self.geometry.partition_start_lba)
+        self.alternate_lba = Entry(32, 8, self.geometry.alternate_lba)
+        self.first_usable_lba = Entry(40, 8, self.geometry.first_usable_lba)
 
-        self.partition_last_lba = Entry(48, 8, self.geometry.partition_last_lba)
+        self.last_usable_lba = Entry(48, 8, self.geometry.last_usable_lba)
         self.disk_guid = Entry(56, 16, self.guid.bytes_le)
-        self.partition_array_start = Entry(72, 8, self.geometry.primary_array_lba)
-        self.partition_array_length = Entry(80, 4, 128)
-        self.partition_entry_size = Entry(84, 4, 128)
-        self.partition_array_crc = Entry(88, 4, 0)
+        self.partition_entry_lba = Entry(72, 8, self.geometry.partition_entry_lba)
+        self.number_of_partition_entries = Entry(80, 4, 128)
+        self.size_of_partition_entries = Entry(84, 4, 128)
+        self.partition_entry_array_crc32 = Entry(88, 4, 0)
         self.reserved_padding = Entry(92, 420, 0)
 
         if self.backup:
-            self.primary_header_lba.data, self.secondary_header_lba.data = (
-                self.secondary_header_lba.data,
-                self.primary_header_lba.data,
+            self.my_lba.data, self.alternate_lba.data = (
+                self.alternate_lba.data,
+                self.my_lba.data,
             )
-            self.partition_array_start.data = (self.geometry.backup_array_lba).to_bytes(
+            self.partition_entry_lba.data = (self.geometry.alternate_array_lba).to_bytes(
                 8, "little"
             )
 
@@ -128,20 +128,20 @@ class Header:
     def byte_structure(self) -> bytes:
         """Convert the Header object to its byte structure"""
         header_fields = [
-            self.header_sig,
+            self.signature,
             self.revision,
             self.header_size,
-            self.header_crc,
+            self.header_crc32,
             self.reserved,
-            self.primary_header_lba,
-            self.secondary_header_lba,
-            self.partition_start_lba,
-            self.partition_last_lba,
+            self.my_lba,
+            self.alternate_lba,
+            self.first_usable_lba,
+            self.last_usable_lba,
             self.disk_guid,
-            self.partition_array_start,
-            self.partition_array_length,
-            self.partition_entry_size,
-            self.partition_array_crc,
+            self.partition_entry_lba,
+            self.number_of_partition_entries,
+            self.size_of_partition_entries,
+            self.partition_entry_array_crc32,
         ]
         byte_list = [x.data_bytes for x in header_fields]
         return b"".join(byte_list)
@@ -152,29 +152,29 @@ class Header:
         def _to_int(field: Entry):
             return int.from_bytes(header_bytes[field.offset : field.end], "little")
 
-        self.header_sig.data = header_bytes[
-            self.header_sig.offset : self.header_sig.offset + self.header_sig.length
+        self.signature.data = header_bytes[
+            self.signature.offset : self.signature.offset + self.signature.length
         ]
         self.revision.data = header_bytes[
             self.revision.offset : self.revision.offset + self.revision.length
         ]
         self.header_size.data = _to_int(self.header_size)
-        self.header_crc.data = _to_int(self.header_crc)
+        self.header_crc32.data = _to_int(self.header_crc32)
         self.reserved.data = _to_int(self.reserved)
-        self.primary_header_lba.data = _to_int(self.primary_header_lba)
-        self.secondary_header_lba.data = _to_int(self.secondary_header_lba)
-        self.partition_start_lba.data = _to_int(self.partition_start_lba)
-        self.partition_last_lba.data = _to_int(self.partition_last_lba)
+        self.my_lba.data = _to_int(self.my_lba)
+        self.alternate_lba.data = _to_int(self.alternate_lba)
+        self.first_usable_lba.data = _to_int(self.first_usable_lba)
+        self.last_usable_lba.data = _to_int(self.last_usable_lba)
         # stored as little endian bytes. This will need to be converted to display in
         # human readable form
         # uuid.UUID(bytes=self.disk_guid.data)
         self.disk_guid.data = header_bytes[
             self.disk_guid.offset : self.disk_guid.offset + self.disk_guid.length
         ]
-        self.partition_array_start.data = _to_int(self.partition_array_start)
-        self.partition_array_length.data = _to_int(self.partition_array_length)
-        self.partition_entry_size.data = _to_int(self.partition_entry_size)
-        self.partition_array_crc.data = _to_int(self.partition_array_crc)
+        self.partition_entry_lba.data = _to_int(self.partition_entry_lba)
+        self.number_of_partition_entries.data = _to_int(self.number_of_partition_entries)
+        self.size_of_partition_entries.data = _to_int(self.size_of_partition_entries)
+        self.partition_entry_array_crc32.data = _to_int(self.partition_entry_array_crc32)
 
 
 class Table:
@@ -207,7 +207,7 @@ class Table:
             header: initialized GPT header object
         """
         part_entry_bytes = self.partitions.byte_structure
-        header.partition_array_crc.data = binascii.crc32(part_entry_bytes)
+        header.partition_entry_array_crc32.data = binascii.crc32(part_entry_bytes)
 
     def checksum_header(self, header: Header) -> None:
         """Checksum the table header
@@ -219,5 +219,5 @@ class Table:
             header: initialized GPT header object
         """
         # zero the old checksum before calculating
-        header.header_crc.data = 0
-        header.header_crc.data = binascii.crc32(header.byte_structure)
+        header.header_crc32.data = 0
+        header.header_crc32.data = binascii.crc32(header.byte_structure)
