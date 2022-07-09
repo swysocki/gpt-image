@@ -12,10 +12,10 @@ def test_default_geometry():
     geo = Geometry(disk_size)
     assert geo.total_sectors == 4096
     assert geo.total_lba == 4096
-    assert geo.partition_last_lba == 4062
+    assert geo.last_usable_lba == 4062
     assert geo.primary_header_byte == 512
     assert geo.primary_array_byte == 1024
-    assert geo.backup_header_lba == 4095
-    assert geo.backup_header_byte == 2096640
-    assert geo.backup_array_lba == 4063
-    assert geo.backup_array_byte == 2080256
+    assert geo.alternate_lba == 4095
+    assert geo.alternate_header_byte == 2096640
+    assert geo.alternate_array_lba == 4063
+    assert geo.alternate_array_byte == 2080256

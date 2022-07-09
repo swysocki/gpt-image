@@ -27,7 +27,7 @@ def test_disk_create(tmp_path):
     assert disk.image_path == disk_path.resolve()
     assert disk.sector_size == 512
     disk.create(DISK_SIZE)
-    assert disk.table.primary_header.header_sig.data == b"EFI PART"
+    assert disk.table.primary_header.signature.data == b"EFI PART"
     assert disk.table.primary_header.backup is False
 
 
@@ -37,8 +37,8 @@ def test_disk_open(new_image):
     assert disk.size == DISK_SIZE * 2
     assert disk.table.primary_header.backup is False
     assert disk.table.secondary_header.backup is True
-    assert disk.table.primary_header.partition_array_start.data == 2
-    assert disk.table.secondary_header.partition_array_start.data == 8159
+    assert disk.table.primary_header.partition_entry_lba.data == 2
+    assert disk.table.secondary_header.partition_entry_lba.data == 8159
     assert len(disk.table.partitions.entries) == 2
     assert disk.table.partitions.entries[0].partition_name.data == "partition1"
 
