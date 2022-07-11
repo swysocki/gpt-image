@@ -10,7 +10,7 @@ This is useful for creating a disk image on SD Cards or embedded devices.
 
 ```python
 
-import gpt_image
+import gpt_image, uuid
 
 # create a new, 8 MB disk, size is in bytes
 disk = gpt_image.disk.Disk("disk-image.raw")
