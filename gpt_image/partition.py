@@ -44,6 +44,7 @@ class Partition:
         name: str = "",
         size: int = 0,
         partition_guid: Union[None, uuid.UUID] = None,
+        attribute_flag: PartitionAttribute = PartitionAttribute.NONE,
         alignment: int = 8,
     ):
         """Initialize Partition Object
@@ -64,7 +65,7 @@ class Partition:
         self.first_lba = Entry(32, 8, 0)
         self.last_lba = Entry(40, 8, 0)
         self.partition_name = Entry(56, 72, 0)
-        self._attribute_flags = Entry(48, 8, 0)
+        self._attribute_flags = Entry(48, 8, attribute_flag.value)
         # if name is set, this isn't an empty partition. Set relevant fields
         # @TODO: don't base an empty partition off of the name attribute
         if name:
@@ -109,12 +110,6 @@ class Partition:
         ]
         byte_list = [x.data_bytes for x in part_fields]
         return b"".join(byte_list)
-
-    def set_attribute(self, position: int):
-        if position > 63:
-            raise PartitionEntryError(f"invalid attribute position error: {position}")
-        attr_int = int.from_bytes(self.attribute_flags.data_bytes, byteorder="little")
-        self.attribute_flags.data = attr_int | (1 << position)
 
     def read(self, partition_bytes: bytes):
         """Unmarshal bytes to Partition Object"""
