@@ -12,8 +12,8 @@ def new_image(tmp_path):
     image_name = tmp_path / "test.img"
     disk = Disk(image_name)
     disk.create(DISK_SIZE * 2)
-    part1 = Partition("partition1", 2 * 1024 * 1024)
-    part2 = Partition("partition2", 3 * 1024 * 1024)
+    part1 = Partition("partition1", 2 * 1024, Partition.LINUX_FILE_SYSTEM)
+    part2 = Partition("partition2", 3 * 1024, Partition.LINUX_FILE_SYSTEM)
     disk.table.partitions.add(part1)
     disk.table.partitions.add(part2)
     disk.write()
@@ -27,8 +27,6 @@ def test_disk_create(tmp_path):
     assert disk.image_path == disk_path.resolve()
     assert disk.sector_size == 512
     disk.create(DISK_SIZE)
-    assert disk.table.primary_header.signature.data == b"EFI PART"
-    assert disk.table.primary_header.backup is False
 
 
 def test_disk_open(new_image):
@@ -37,10 +35,10 @@ def test_disk_open(new_image):
     assert disk.size == DISK_SIZE * 2
     assert disk.table.primary_header.backup is False
     assert disk.table.secondary_header.backup is True
-    assert disk.table.primary_header.partition_entry_lba.data == 2
-    assert disk.table.secondary_header.partition_entry_lba.data == 8159
+    assert disk.table.primary_header.partition_entry_lba == 2
+    assert disk.table.secondary_header.partition_entry_lba == 8159
     assert len(disk.table.partitions.entries) == 2
-    assert disk.table.partitions.entries[0].partition_name.data == "partition1"
+    assert disk.table.partitions.entries[0].partition_name == "partition1"
 
 
 # def test_write_data_default(new_image: Disk):
