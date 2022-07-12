@@ -2,6 +2,11 @@
 
 <!--next-version-placeholder-->
 
+## v0.4.2 (2022-07-12)
+### Fix
+* Allow setting the partition attribute on init ([`523e220`](https://github.com/swysocki/gpt-image/commit/523e220c3bc3023e3f59c76517f2338773d31645))
+* Import modules in package namespace ([`c35476f`](https://github.com/swysocki/gpt-image/commit/c35476faa64b9af870648f0f1dd86e032a36040e))
+
 ## v0.4.1 (2022-07-09)
 ### Fix
 * Use EFI spec mnemonics for attribute names ([`0e62e24`](https://github.com/swysocki/gpt-image/commit/0e62e24c1d80939068c7d4fd8c5dc703fbd99eb9))
