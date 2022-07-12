@@ -112,9 +112,9 @@ class Header:
                 self.alternate_lba.data,
                 self.my_lba.data,
             )
-            self.partition_entry_lba.data = (self.geometry.alternate_array_lba).to_bytes(
-                8, "little"
-            )
+            self.partition_entry_lba.data = (
+                self.geometry.alternate_array_lba
+            ).to_bytes(8, "little")
 
         # header start byte relative to the table itself, not the disk
         # primary will be 0 secondary will be LBA 32
@@ -172,9 +172,13 @@ class Header:
             self.disk_guid.offset : self.disk_guid.offset + self.disk_guid.length
         ]
         self.partition_entry_lba.data = _to_int(self.partition_entry_lba)
-        self.number_of_partition_entries.data = _to_int(self.number_of_partition_entries)
+        self.number_of_partition_entries.data = _to_int(
+            self.number_of_partition_entries
+        )
         self.size_of_partition_entries.data = _to_int(self.size_of_partition_entries)
-        self.partition_entry_array_crc32.data = _to_int(self.partition_entry_array_crc32)
+        self.partition_entry_array_crc32.data = _to_int(
+            self.partition_entry_array_crc32
+        )
 
 
 class Table:
