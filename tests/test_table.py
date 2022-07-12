@@ -5,6 +5,7 @@ from gpt_image.geometry import Geometry
 from gpt_image.table import Header, ProtectiveMBR, Table
 
 DISK_SIZE = 2 * 1024 * 1024  # 2 MB disk
+DISK_GUID = "51581dee-faaa-404d-b0fe-85dc65157702"
 
 
 @pytest.fixture
@@ -12,60 +13,69 @@ def new_geometry():
     return Geometry(DISK_SIZE)
 
 
-def test_protective_mbr_init(new_geometry):
-    geo = new_geometry
-    pmbr = ProtectiveMBR(geo)
-    assert type(pmbr.byte_structure) == bytes
-    pmbr_bytes = pmbr.byte_structure
-    assert pmbr_bytes[pmbr.partition_type.offset : pmbr.partition_type.end] == b"\xEE"
-    assert pmbr_bytes[
-        pmbr.start_sector.offset : pmbr.start_sector.end
-    ] == geo.my_lba.to_bytes(4, "little")
-    assert pmbr_bytes[pmbr.partition_size.offset : pmbr.partition_size.end] == (
-        geo.total_sectors - 1
-    ).to_bytes(4, "little")
-
-
-def test_proctective_mbr_read(new_geometry):
+def test_protective_mbr_marshall(new_geometry: Geometry):
     pmbr = ProtectiveMBR(new_geometry)
-    # change partition type to test it's read back properly
-    pmbr.partition_type.data = b"\xFF"
-    pmbr_b = pmbr.byte_structure
-    new_pmbr = ProtectiveMBR(new_geometry)
-    new_pmbr.read(pmbr_b)
-    assert new_pmbr.partition_type.data == b"\xFF"
+    pmbr_bytes = pmbr.marshal()
+    assert pmbr_bytes[:446] == b"\x00" * 446
+    assert pmbr_bytes[446:447] == b"\x00"
+    assert pmbr_bytes[447:450] == b"\x00" * 3
+    assert pmbr_bytes[450:451] == b"\xEE"
+    assert pmbr_bytes[451:454] == b"\x00" * 3
+    assert pmbr_bytes[454:458] == b"\x01\x00\x00\x00"
+    assert pmbr_bytes[458:462] == b"\xff\x0f\x00\x00"
+    assert pmbr_bytes[462:510] == b"\x00" * 48
+    assert pmbr_bytes[510:512] == b"\x55\xAA"
 
 
-def test_header_init_primary(new_geometry):
-    geo = new_geometry
-    head = Header(geo, uuid.uuid4())
-    assert head.backup is False
-    assert head.my_lba.data == geo.my_lba
-    assert head.alternate_lba.data == geo.alternate_lba
-    assert head.partition_entry_lba.data == geo.partition_entry_lba
+def test_protective_mbr_read(new_geometry: Geometry):
+    pmbr = ProtectiveMBR(new_geometry)
+    pmbr_bytes = pmbr.marshal()
+
+    pmbr_o = ProtectiveMBR.read(pmbr_bytes, new_geometry)
+    assert pmbr_o.boot_indicator == 0
+    assert pmbr_o.start_chs == b"\x00"
+    assert pmbr_o.partition_type == b"\xEE"
+    assert pmbr_o.end_chs == b"\x00"
+    assert pmbr_o.start_sector == 1
+    assert pmbr_o.partition_size == 4095
+    assert pmbr_o.signature == b"\x55\xAA"
 
 
-def test_header_init_backup(new_geometry):
-    geo = new_geometry
-    head = Header(geo, uuid.uuid4(), is_backup=True)
-    assert head.backup is True
-    # ensure the header LBA has been swapped
-    assert head.my_lba.data == geo.alternate_lba
-    assert head.alternate_lba.data == geo.my_lba
-    assert head.partition_entry_start_byte == 0
-    assert head.header_start_byte == int(32 * geo.sector_size)
+def test_header_marshall(new_geometry: Geometry):
+    header = Header(
+        new_geometry,
+        guid=DISK_GUID,
+    )
+    header_b = header.marshal()
+    assert len(header_b) == new_geometry.sector_size
+    assert header_b[:8] == b"EFI PART"
+    assert header_b[8:12] == b"\x00\x00\x01\x00"
+    assert header_b[12:16] == b"\\\x00\x00\x00"
+    assert header_b[16:20] == b"\x00" * 4
+    assert header_b[20:24] == b"\x00" * 4
+    assert header_b[24:32] == b"\x01" + b"\x00" * 7
+    assert header_b[32:40] == b"\xff\x0f" + b"\x00" * 6
+    assert header_b[40:48] == b'"\x00' + b"\x00" * 6
+    assert header_b[48:56] == b"\xde\x0f" + b"\x00" * 6
+    assert header_b[56:72] == uuid.UUID(DISK_GUID).bytes_le
+    assert header_b[72:80] == b"\x02" + b"\x00" * 7
+    assert header_b[80:84] == b"\x80" + b"\x00" * 3
+    assert header_b[84:88] == b"\x80" + b"\x00" * 3
+    assert header_b[88:92] == b"\x00" * 4
 
 
-def test_header_read(new_geometry):
-    head = Header(new_geometry, uuid.uuid4())
-    head_b = head.byte_structure
+def test_header_read(new_geometry: Geometry):
+    header = Header(
+        new_geometry,
+        guid=DISK_GUID,
+    )
+    header_b = header.marshal()
+    assert len(header_b) == new_geometry.sector_size
 
-    head_ex = Header(new_geometry)
-    head_ex.read(head_b)
-    assert head_ex.signature.data == head.signature.data
-    assert head_ex.revision.data == head.revision.data
-    assert head_ex.revision.data == head.revision.data
-    assert head_ex.disk_guid.data == head.disk_guid.data
+    header_o = Header.read(header_b[: Header._HEADER_SIZE], new_geometry)
+    assert header_o.signature == Header._SIGNATURE
+    assert header_o.revision == Header._REVISION
+    assert header_o.header_size == Header._HEADER_SIZE
 
 
 def test_table_init(new_geometry):
@@ -78,21 +88,21 @@ def test_table_init(new_geometry):
 def test_checksum_partitions(new_geometry):
     table = Table(new_geometry)
     # partition checksum will be blank before when initialized
-    assert table.primary_header.partition_entry_array_crc32.data == 0
+    assert table.primary_header.partition_entry_array_crc32 == 0
     table.checksum_partitions(table.primary_header)
     # test that the checksum is no longer zeroed
     assert (
-        table.primary_header.partition_entry_array_crc32.data == 2874462854
+        table.primary_header.partition_entry_array_crc32 == 2874462854
     )  # predictable binascii.crc32
 
 
 def test_checksum_header(new_geometry):
     table = Table(new_geometry)
-    assert table.primary_header.header_crc32.data == 0
+    assert table.primary_header.header_crc32 == 0
+    # create a predictable GUID so that the test is predictable
+    table.primary_header.disk_guid = DISK_GUID
     table.checksum_header(table.primary_header)
-    # @TODO: (sjw) create header with static UUID
-    # the crc is not predictable because the Header UUID is dynamic
-    assert table.primary_header.header_crc32.data > 0
+    assert table.primary_header.header_crc32 == 82915359
 
 
 def test_update(new_geometry):

@@ -1,15 +1,14 @@
+import struct
 import uuid
 from enum import Enum
 from math import ceil
-from sys import byteorder
-from typing import List, Union
+from typing import List
 
-from gpt_image.entry import Entry
 from gpt_image.geometry import Geometry
 
 
 class PartitionEntryError(Exception):
-    pass
+    """Exception class for erros in partition entries"""
 
 
 class PartitionAttribute(Enum):
@@ -36,48 +35,32 @@ class Partition:
     from a table's partition list.
     """
 
+    _PARTITION_FORMAT = struct.Struct("<16s16sQQQ72s")
+    _EMPTY_GUID = "00000000-0000-0000-0000-000000000000"
     # https://en.wikipedia.org/wiki/GUID_Partition_Table#Partition_entries
     LINUX_FILE_SYSTEM = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
     EFI_SYSTEM_PARTITION = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
 
     def __init__(
         self,
-        name: str = "",
-        size: int = 0,
-        partition_guid: Union[None, uuid.UUID] = None,
-        attribute_flag: PartitionAttribute = PartitionAttribute.NONE,
+        name: str,
+        size: int,
+        type_guid: str,
+        partition_guid: str = "",
         alignment: int = 8,
+        partition_attributes: int = 0,
     ):
-        """Initialize Partition Object
-
-        All parameters have a default value to allow Partition() to create
-        an empty partition object.  If "name" is set, we assume this is not
-        an empty object and set the other values.
-
-        Empty partition objects are used as placeholders in the partition
-        entry array.
-
-        Attributes:
-            size: partition size in Bytes
-        """
-        # create an empty partition object
-        self.type_guid = Entry(0, 16, 0)
-        self.partition_guid = Entry(16, 16, 0)
-        self.first_lba = Entry(32, 8, 0)
-        self.last_lba = Entry(40, 8, 0)
-        self.partition_name = Entry(56, 72, 0)
-        self._attribute_flags = Entry(48, 8, attribute_flag.value)
-        # if name is set, this isn't an empty partition. Set relevant fields
-        # @TODO: don't base an empty partition off of the name attribute
-        if name:
-            self.type_guid.data = uuid.UUID(Partition.LINUX_FILE_SYSTEM).bytes_le
-            if not partition_guid:
-                self.partition_guid.data = uuid.uuid4().bytes_le
-            else:
-                self.partition_guid.data = partition_guid.bytes_le
-            # the partition name is stored as utf_16_le
-            self.partition_name.data = bytes(name, encoding="utf_16_le")
-
+        """Initialize Partition Object"""
+        self.type_guid = type_guid
+        self.partition_name = name
+        self._attribute_flags = 0
+        self.partition_guid = partition_guid
+        # if the partition GUID is empty, generate one
+        if not partition_guid:
+            self.partition_guid = str(uuid.uuid4())
+        self.first_lba = 0
+        self.last_lba = 0
+        self._attribute_flags = partition_attributes
         self.alignment = alignment
         self.size = size
 
@@ -94,52 +77,44 @@ class Partition:
 
         """
         if flag.value == 0:
-            self._attribute_flags.data = 0
+            self._attribute_flags = 0
         else:
-            attr_int = int.from_bytes(
-                self._attribute_flags.data_bytes, byteorder="little"
-            )
-            self._attribute_flags = Entry(48, 8, attr_int | (1 << flag.value))
+            # bit indices are zero-based so we subtract 1 from our flag
+            self._attribute_flags = self._attribute_flags | (1 << flag.value)
 
-    @property
-    def byte_structure(self) -> bytes:
-        part_fields = [
-            self.type_guid,
-            self.partition_guid,
+    def marshal(self) -> bytes:
+        """Marshal to byte structure"""
+        partition_bytes = self._PARTITION_FORMAT.pack(
+            uuid.UUID(self.type_guid).bytes_le,
+            uuid.UUID(self.partition_guid).bytes_le,
             self.first_lba,
             self.last_lba,
             self.attribute_flags,
-            self.partition_name,
-        ]
-        byte_list = [x.data_bytes for x in part_fields]
-        return b"".join(byte_list)
+            bytes(self.partition_name, encoding="utf_16_le"),
+        )
+        return partition_bytes
 
-    def read(self, partition_bytes: bytes):
-        """Unmarshal bytes to Partition Object"""
-        self.type_guid.data = partition_bytes[
-            self.type_guid.offset : self.type_guid.offset + self.type_guid.length
-        ]
-        self.partition_guid.data = partition_bytes[
-            self.partition_guid.offset : self.partition_guid.offset
-            + self.partition_guid.length
-        ]
-        self.first_lba.data = partition_bytes[
-            self.first_lba.offset : self.first_lba.offset + self.first_lba.length
-        ]
-        self.last_lba.data = partition_bytes[
-            self.last_lba.offset : self.last_lba.offset + self.last_lba.length
-        ]
-        self.attribute_flags.data = partition_bytes[
-            self.attribute_flags.offset : self.attribute_flags.offset
-            + self.attribute_flags.length
-        ]
-        part_name_b = partition_bytes[
-            self.partition_name.offset : self.partition_name.offset
-            + self.partition_name.length
-        ]
-        # partition name is stored as UTF-16-LE padded to 72 bytes
-        self.partition_name.data = part_name_b.decode(encoding="utf_16_le").rstrip(
-            "\x00"
+    @staticmethod
+    def read(partition_bytes: bytes, sector_size: int) -> "Partition":
+        """Create a Partition object from existing bytes"""
+        if len(partition_bytes) != PartitionEntryArray.EntryLength:
+            raise ValueError(f"Invalid Partition Entry length: {len(partition_bytes)}")
+        (
+            type_guid,
+            partition_guid,
+            first_lba,
+            last_lba,
+            attribute_flags,
+            partition_name,
+        ) = Partition._PARTITION_FORMAT.unpack(partition_bytes)
+        size = (last_lba - first_lba + 1) * sector_size
+
+        return Partition(
+            partition_name.decode("utf_16_le").rstrip("\x00"),
+            size,
+            str(uuid.UUID(bytes_le=type_guid)),
+            str(uuid.UUID(bytes_le=partition_guid)),
+            partition_attributes=attribute_flags,
         )
 
 
@@ -159,8 +134,8 @@ class PartitionEntryArray:
         Appends the Partition to the next available entry. Calculates the
         LBA's
         """
-        partition.first_lba.data = self._get_first_lba(partition)
-        partition.last_lba.data = self._get_last_lba(partition)
+        partition.first_lba = self._get_first_lba(partition)
+        partition.last_lba = self._get_last_lba(partition)
         self.entries.append(partition)
 
     def _get_first_lba(self, partition: Partition) -> int:
@@ -180,7 +155,7 @@ class PartitionEntryArray:
 
         largest_lba = 0
         for part in self.entries:
-            lba = part.last_lba.data
+            lba = part.last_lba
             if int(lba) > int(largest_lba):
                 largest_lba = lba
         last_lba = 33 if largest_lba == 0 else largest_lba
@@ -197,13 +172,12 @@ class PartitionEntryArray:
 
         # round the LBA up to ensure our LBA will hold the partition
         lba = int(ceil(partition.size / self._geometry.sector_size))
-        f_lba = int(partition.first_lba.data)
+        f_lba = int(partition.first_lba)
         return (f_lba + lba) - 1
 
-    @property
-    def byte_structure(self) -> bytes:
-        """Convert the Partition Array to its byte structure"""
-        parts = [x.byte_structure for x in self.entries]
+    def marshal(self) -> bytes:
+        """Convert the Partition Entry Array to its byte structure"""
+        parts = [x.marshal() for x in self.entries]
         part_bytes = b"".join(parts)
         # pad the rest with zeros
         padded = part_bytes + b"\x00" * (

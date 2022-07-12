@@ -19,11 +19,11 @@ class Disk:
         image_path: file image path (absolute or relative)
     """
 
-    def __init__(self, image_path: str) -> None:
+    def __init__(self, image_path: str, sector_size: int = 512) -> None:
         """Init Disk with a file path"""
         self.image_path = pathlib.Path(image_path)
         self.name = self.image_path.name
-        self.sector_size = 512  # 512 bytes
+        self.sector_size = sector_size
 
     def open(self):
         """Read existing GPT disk Table"""
@@ -41,9 +41,9 @@ class Disk:
             + self.geometry.header_length
         ]
         self.table.primary_header = Header(self.geometry)
-        self.table.primary_header.read(primary_header_b)
+        self.table.primary_header.read(primary_header_b, self.geometry)
         self.table.secondary_header = Header(self.geometry, is_backup=True)
-        self.table.secondary_header.read(backup_header_b)
+        self.table.secondary_header.read(backup_header_b, self.geometry)
         # read the partition tables
         primary_part_table_b = disk_bytes[
             self.geometry.primary_array_byte : self.geometry.primary_array_byte
@@ -56,16 +56,15 @@ class Disk:
         if primary_part_table_b != backup_part_table_b:
             raise TableReadError("primary and backup table do not match")
         # unmarshal the partition bytes to objects
-        # loop through the entire array and unmarshall the bytes if partition
-        # data is found
+        # add the partition to the entry list if the type_guid is valid
         for i in range(PartitionEntryArray.EntryCount):
             offset = i * PartitionEntryArray.EntryLength
             partition_bytes = primary_part_table_b[
                 offset : offset + PartitionEntryArray.EntryLength
             ]
-            new_part = Partition()
-            new_part.read(partition_bytes)
-            if new_part.type_guid.data != b"\x00" * 16:
+            new_part = Partition.read(partition_bytes, self.geometry.sector_size)
+            print(new_part.type_guid)
+            if new_part.type_guid != Partition._EMPTY_GUID:
                 self.table.partitions.entries.append(new_part)
 
     def create(self, size: int):
@@ -84,7 +83,7 @@ class Disk:
             # zero entire disk
             f.write(b"\x00" * self.size)
             f.seek(0)
-            f.write(self.table.protective_mbr.byte_structure)
+            f.write(self.table.protective_mbr.marshal())
         self.write()
 
     def write(self):
@@ -98,19 +97,19 @@ class Disk:
         with open(self.image_path, "r+b") as f:
             # write primary header
             f.seek(self.geometry.primary_header_byte)
-            f.write(self.table.primary_header.byte_structure)
+            f.write(self.table.primary_header.marshal())
 
             # write primary partition table
             f.seek(self.geometry.primary_array_byte)
-            f.write(self.table.partitions.byte_structure)
+            f.write(self.table.partitions.marshal())
 
             # move to secondary header location and write
             f.seek(self.geometry.alternate_header_byte)
-            f.write(self.table.secondary_header.byte_structure)
+            f.write(self.table.secondary_header.marshal())
 
             # write secondary partition table
             f.seek(self.geometry.alternate_array_byte)
-            f.write(self.table.partitions.byte_structure)
+            f.write(self.table.partitions.marshal())
 
     def write_data(self, data: bytes, partition: Partition, offset: int = 0) -> None:
         # @NOTE: this isn't a GPT function. Writing data should be outside the
@@ -127,8 +126,7 @@ class Disk:
             raise ValueError(f"data must be of type bytes. found type: {type(data)}")
 
         with open(self.image_path, "r+b") as f:
-            start_lba = int.from_bytes(partition.first_lba.data_bytes, "little")
-            start_byte = int(start_lba * self.sector_size)
+            start_byte = int(partition.first_lba * self.sector_size)
             with open(self.image_path, "r+b") as f:
                 f.seek(start_byte + offset)
                 f.write(data)

@@ -23,11 +23,11 @@ def create_image(tmp_path):
     # this should produce a disk that can be opened and validated with GPT tools
     new_disk = disk.Disk(image)
     new_disk.create(DISK_SIZE)
-    part1 = Partition(PART1_NAME, PART1_SIZE, uuid.uuid4())
+    part1 = Partition(PART1_NAME, PART1_SIZE, Partition.LINUX_FILE_SYSTEM)
     part1.attribute_flags = PartitionAttribute.HIDDEN
     new_disk.table.partitions.add(part1)
 
-    part2 = Partition(PART2_NAME, PART2_SIZE, uuid.UUID(STATIC_UUID))
+    part2 = Partition(PART2_NAME, PART2_SIZE, Partition.LINUX_FILE_SYSTEM, STATIC_UUID)
     new_disk.table.partitions.add(part2)
 
     new_disk.write()
