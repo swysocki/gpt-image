@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.5.0 (2022-07-14)
+### Feature
+* Migrate to struct module ([`aaa777f`](https://github.com/swysocki/gpt-image/commit/aaa777f2ab67c8d57c94dcbb3697ed3384a7a251))
+
 ## v0.4.2 (2022-07-12)
 ### Fix
 * Allow setting the partition attribute on init ([`523e220`](https://github.com/swysocki/gpt-image/commit/523e220c3bc3023e3f59c76517f2338773d31645))
