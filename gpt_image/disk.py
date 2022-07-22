@@ -1,3 +1,4 @@
+import json
 import pathlib
 
 from gpt_image.geometry import Geometry
@@ -63,9 +64,19 @@ class Disk:
                 offset : offset + PartitionEntryArray.EntryLength
             ]
             new_part = Partition.read(partition_bytes, self.geometry.sector_size)
-            print(new_part.type_guid)
             if new_part.type_guid != Partition._EMPTY_GUID:
                 self.table.partitions.entries.append(new_part)
+
+    def __repr__(self):
+        # objects will be in the form of JSON strings, convert them to dicts
+        # so that we can create a single JSON document
+        partition_list = [json.loads(str(p)) for p in self.table.partitions.entries]
+        disk_dict = {
+            "primary_header": json.loads(str(self.table.primary_header)),
+            "backup_header": json.loads(str(self.table.secondary_header)),
+            "partitions": partition_list,
+        }
+        return json.dumps(disk_dict, indent=2, ensure_ascii=False)
 
     def create(self, size: int):
         """Create the disk image on Disk

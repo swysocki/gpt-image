@@ -3,6 +3,7 @@ Header information reference: https://en.wikipedia.org/wiki/GUID_Partition_Table
 
 """
 import binascii
+import json
 import struct
 import uuid
 
@@ -125,6 +126,15 @@ class Header:
                 self.my_lba,
             )
             self.partition_entry_lba = self._geometry.alternate_array_lba
+
+    def __repr__(self) -> str:
+        filtered_values = {k: v for k, v in vars(self).items() if not k.startswith("_")}
+        # convert dictionary values that are bytes to strings
+        converted_values = {
+            k: v.decode() for k, v in filtered_values.items() if isinstance(v, bytes)
+        }
+        filtered_values.update(converted_values)
+        return json.dumps(filtered_values, indent=2, ensure_ascii=False)
 
     def marshal(self) -> bytes:
         header_bytes = self._HEADER_FORMAT.pack(
