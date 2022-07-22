@@ -1,4 +1,7 @@
+import json
+
 import pytest
+
 from gpt_image.disk import Disk
 from gpt_image.partition import Partition
 
@@ -41,30 +44,12 @@ def test_disk_open(new_image):
     assert disk.table.partitions.entries[0].partition_name == "partition1"
 
 
-# def test_write_data_default(new_image: Disk):
-#     part = Partition("test-part", 1024, uuid.uuid4(), 1)
-#     new_image.table.partitions.add(part)
-#     new_image.update_table()
-#     new_image.write_data(BYTE_DATA, part)
-#     with open(new_image.image_path, "r+b") as f:
-#         f.seek(part.first_lba.data * new_image.sector_size)
-#         assert f.read(4) == BYTE_DATA
-#
-#
-# def test_write_data_offset(new_image: Disk):
-#     part = Partition("test-part", 1024, uuid.uuid4(), 1)
-#     new_image.table.partitions.add(part)
-#     new_image.update_table()
-#     new_image.write_data(BYTE_DATA, part, OFFSET)
-#     new_image.write_data(BYTE_DATA, part, OFFSET + OFFSET)
-#     with open(new_image.image_path, "r+b") as f:
-#         f.seek(part.first_lba.data * new_image.sector_size + OFFSET)
-#         assert f.read(4) == BYTE_DATA
-#         f.seek(part.first_lba.data * new_image.sector_size + OFFSET + OFFSET)
-#         assert f.read(4) == BYTE_DATA
-#
-#
-# def test_write_data_type_error(new_image: Disk):
-#     part = Partition("test-part", 1024, uuid.uuid4())
-#     with pytest.raises(ValueError):
-#         new_image.write_data(str("foobar"), part)  # type: ignore
+def test_disk_info(new_image):
+    disk = Disk(new_image)
+    disk.open()
+    disk_s = str(disk)
+    disk_d = json.loads(disk_s)
+    assert not disk_d["primary_header"]["backup"]
+    assert disk_d["backup_header"]["backup"]
+    assert disk_d["backup_header"]["header_size"] == 92
+    assert len(disk_d["partitions"]) == 2

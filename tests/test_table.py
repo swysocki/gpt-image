@@ -1,6 +1,8 @@
+import json
 import uuid
 
 import pytest
+
 from gpt_image.geometry import Geometry
 from gpt_image.table import Header, ProtectiveMBR, Table
 
@@ -76,6 +78,15 @@ def test_header_read(new_geometry: Geometry):
     assert header_o.signature == Header._SIGNATURE
     assert header_o.revision == Header._REVISION
     assert header_o.header_size == Header._HEADER_SIZE
+
+
+def test_header_repr(new_geometry: Geometry):
+    header = Header(new_geometry, guid=DISK_GUID)
+    header_s = header.__repr__()
+    assert "EFI PART" in header_s
+    header_d = json.loads(header_s)
+    assert header_d.get("header_size") == Header._HEADER_SIZE
+    assert len(header_d) == 15
 
 
 def test_table_init(new_geometry):

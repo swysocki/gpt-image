@@ -1,7 +1,9 @@
+import json
 import uuid
 
 from gpt_image.geometry import Geometry
-from gpt_image.partition import Partition, PartitionAttribute, PartitionEntryArray
+from gpt_image.partition import (Partition, PartitionAttribute,
+                                 PartitionEntryArray)
 
 PART_NAME = "test-part"
 PART_NAME_2 = "partition-2"
@@ -16,6 +18,16 @@ def test_partition_init_guid():
     del part
     part = Partition(PART_NAME, 2 * 1024, Partition.LINUX_FILE_SYSTEM, PART_UUID)
     assert part.partition_guid == PART_UUID
+
+
+def test_partition_repr():
+    part = Partition(PART_NAME, 2 * 1024, Partition.LINUX_FILE_SYSTEM)
+    part_s = part.__repr__()
+    assert PART_NAME in part_s
+    # attributes with leading underscore should not be in __repr__
+    assert "_attribute" not in part_s
+    part_d = json.loads(part_s)
+    assert part_d.get('partition_name') == PART_NAME
 
 
 def test_partition_attribute():

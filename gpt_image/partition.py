@@ -1,3 +1,4 @@
+import json
 import struct
 import uuid
 from enum import Enum
@@ -64,6 +65,10 @@ class Partition:
         self.alignment = alignment
         self.size = size
 
+    def __repr__(self) -> str:
+        partitionvalue = {k: v for k, v in vars(self).items() if not k.startswith("_")}
+        return json.dumps(partitionvalue, indent=2, ensure_ascii=False)
+
     @property
     def attribute_flags(self):
         return self._attribute_flags
@@ -109,13 +114,16 @@ class Partition:
         ) = Partition._PARTITION_FORMAT.unpack(partition_bytes)
         size = (last_lba - first_lba + 1) * sector_size
 
-        return Partition(
+        part = Partition(
             partition_name.decode("utf_16_le").rstrip("\x00"),
             size,
             str(uuid.UUID(bytes_le=type_guid)),
             str(uuid.UUID(bytes_le=partition_guid)),
             partition_attributes=attribute_flags,
         )
+        part.first_lba = first_lba 
+        part.last_lba = last_lba
+        return part
 
 
 class PartitionEntryArray:
