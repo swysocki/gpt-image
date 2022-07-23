@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.6.0 (2022-07-23)
+### Feature
+* Add JSON output of objects ([`467f104`](https://github.com/swysocki/gpt-image/commit/467f1046c7898e878a03cb8f4ee8b8cf337b0c87))
+
 ## v0.5.0 (2022-07-14)
 ### Feature
 * Migrate to struct module ([`aaa777f`](https://github.com/swysocki/gpt-image/commit/aaa777f2ab67c8d57c94dcbb3697ed3384a7a251))
