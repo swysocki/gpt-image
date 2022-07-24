@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.6.1 (2022-07-24)
+### Fix
+* Return friendly partition attribute flags ([`6fb826f`](https://github.com/swysocki/gpt-image/commit/6fb826f715d74792fae265afe2634349989a0025))
+
 ## v0.6.0 (2022-07-23)
 ### Feature
 * Add JSON output of objects ([`467f104`](https://github.com/swysocki/gpt-image/commit/467f1046c7898e878a03cb8f4ee8b8cf337b0c87))
