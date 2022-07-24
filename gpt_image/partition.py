@@ -67,11 +67,23 @@ class Partition:
 
     def __repr__(self) -> str:
         partitionvalue = {k: v for k, v in vars(self).items() if not k.startswith("_")}
+        partitionvalue['attribute_flags'] = self.attribute_flags
         return json.dumps(partitionvalue, indent=2, ensure_ascii=False)
 
     @property
-    def attribute_flags(self):
-        return self._attribute_flags
+    def attribute_flags(self) -> List[int]:
+        """Return a list of partition attribute flags
+
+        Returns an empty list if no attributes are set
+
+        """
+        flags = []
+        flag_int = self._attribute_flags
+        while flag_int:
+            flags.append((flag_int).bit_length() - 1)
+            # remove the MSB by masking the integer by length -1
+            flag_int = flag_int & ((1 << (flag_int.bit_length() - 1)) - 1)
+        return flags
 
     @attribute_flags.setter
     def attribute_flags(self, flag: PartitionAttribute):
@@ -79,22 +91,23 @@ class Partition:
 
         Sets the bit corresponding to the PartitionAttribute Class.
         If the PartitionAttribute.NONE value is set, this clears all flags
-
         """
         if flag.value == 0:
             self._attribute_flags = 0
         else:
-            # bit indices are zero-based so we subtract 1 from our flag
             self._attribute_flags = self._attribute_flags | (1 << flag.value)
 
     def marshal(self) -> bytes:
         """Marshal to byte structure"""
+        attributes_value = 0
+        for attrib in self.attribute_flags:
+            attributes_value += 2**attrib
         partition_bytes = self._PARTITION_FORMAT.pack(
             uuid.UUID(self.type_guid).bytes_le,
             uuid.UUID(self.partition_guid).bytes_le,
             self.first_lba,
             self.last_lba,
-            self.attribute_flags,
+            attributes_value,
             bytes(self.partition_name, encoding="utf_16_le"),
         )
         return partition_bytes
@@ -121,7 +134,7 @@ class Partition:
             str(uuid.UUID(bytes_le=partition_guid)),
             partition_attributes=attribute_flags,
         )
-        part.first_lba = first_lba 
+        part.first_lba = first_lba
         part.last_lba = last_lba
         return part
 
