@@ -37,7 +37,7 @@ class Partition:
     """
 
     _PARTITION_FORMAT = struct.Struct("<16s16sQQQ72s")
-    _EMPTY_GUID = "00000000-0000-0000-0000-000000000000"
+    EMPTY_GUID = "00000000-0000-0000-0000-000000000000"
     # https://en.wikipedia.org/wiki/GUID_Partition_Table#Partition_entries
     LINUX_FILE_SYSTEM = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
     EFI_SYSTEM_PARTITION = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
@@ -77,7 +77,7 @@ class Partition:
         Returns an empty list if no attributes are set
 
         """
-        flags = []
+        flags: List[int] = []
         flag_int = self._attribute_flags
         while flag_int:
             flags.append((flag_int).bit_length() - 1)
@@ -171,8 +171,8 @@ class PartitionEntryArray:
         """
 
         def next_lba(end_lba: int, alignment: int):
-            m = int(end_lba / alignment)
-            return (m + 1) * alignment
+            lba_boundary = int(end_lba / alignment)
+            return (lba_boundary + 1) * alignment
 
         largest_lba = 0
         for part in self.entries:

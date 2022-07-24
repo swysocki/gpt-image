@@ -11,23 +11,23 @@ class TableReadError(Exception):
 
 
 class Disk:
-    """GPT disk
+    """GPT disk object
 
-    A disk objects represents a new or existing GPT disk image.  If the file exists,
-    it is assumed to be an existing GPT image. If it does not, a new file is created.
+    A disk objects represents a new or existing GPT disk image.
 
     Attributes:
         image_path: file image path (absolute or relative)
+        sector_size: disk sector size in Bytes
     """
 
     def __init__(self, image_path: str, sector_size: int = 512) -> None:
-        """Init Disk with a file path"""
+        """Init Disk with a file path and sector size"""
         self.image_path = pathlib.Path(image_path)
         self.name = self.image_path.name
         self.sector_size = sector_size
 
     def open(self):
-        """Read existing GPT disk Table"""
+        """Open an existing GPT disk image"""
         disk_bytes = self.image_path.read_bytes()
         self.size = self.image_path.stat().st_size
         self.geometry = Geometry(self.size, self.sector_size)
@@ -64,7 +64,7 @@ class Disk:
                 offset : offset + PartitionEntryArray.EntryLength
             ]
             new_part = Partition.read(partition_bytes, self.geometry.sector_size)
-            if new_part.type_guid != Partition._EMPTY_GUID:
+            if new_part.type_guid != Partition.EMPTY_GUID:
                 self.table.partitions.entries.append(new_part)
 
     def __repr__(self):
@@ -133,11 +133,11 @@ class Disk:
             offset: byte offset for writing data. The default is 0 but can be set to
                 support custom offsets
         """
-        if not type(data) is bytes:
-            raise ValueError(f"data must be of type bytes. found type: {type(data)}")
-
-        with open(self.image_path, "r+b") as f:
-            start_byte = int(partition.first_lba * self.sector_size)
+        if isinstance(data, bytes):  # type: ignore
             with open(self.image_path, "r+b") as f:
-                f.seek(start_byte + offset)
-                f.write(data)
+                start_byte = int(partition.first_lba * self.sector_size)
+                with open(self.image_path, "r+b") as f:
+                    f.seek(start_byte + offset)
+                    f.write(data)
+        else:
+            raise TypeError("data not of type: bytes")

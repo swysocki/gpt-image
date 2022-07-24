@@ -62,18 +62,24 @@ class ProtectiveMBR:
     @staticmethod
     def read(pmbr_bytes: bytes, geometry: Geometry) -> "ProtectiveMBR":
         (
-            _,
+            _,  # ignore padding
             boot_indicator,
             start_chs,
             partition_type,
             end_chs,
             start_sector,
             partition_size,
-            _,
+            _,  # ignore padding
             signature,
         ) = ProtectiveMBR._MBR_FORMAT.unpack(pmbr_bytes)
 
-        return ProtectiveMBR(geometry, partition_type, signature)
+        pmbr = ProtectiveMBR(geometry, partition_type, signature)
+        pmbr.boot_indicator = boot_indicator
+        pmbr.start_chs = start_chs
+        pmbr.end_chs = end_chs
+        pmbr.start_sector = start_sector
+        pmbr.partition_size = partition_size
+        return pmbr
 
 
 class Header:
@@ -159,12 +165,23 @@ class Header:
 
     @staticmethod
     def read(header_bytes: bytes, geometry: Geometry) -> "Header":
+        """Construct GPT header from existing bytes
+
+        Args:
+            header_bytes: existing GPT header bytes
+            geometry: Geometry class instance
+        Returns:
+            Header instance
+        Raises:
+            HeaderReadError if the header is invalid
+        """
+
         (
             signature,
             revision,
             header_size,
             header_crc32,
-            reserved,
+            _,  # ignore reserved
             my_lba,
             alternate_lba,
             first_usable_lba,
@@ -191,12 +208,15 @@ class Header:
         geometry.last_usable_lba = last_usable_lba
         geometry.partition_entry_lba = partition_entry_lba
 
-        return Header(
+        header = Header(
             geometry,
             header_crc32,
             partition_entry_crc32,
             disk_guid,
         )
+        header.number_of_partition_entries = number_of_partitions
+        header.size_of_partition_entries = size_of_partitions
+        return header
 
 
 class Table:

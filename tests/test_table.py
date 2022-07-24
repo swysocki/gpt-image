@@ -35,15 +35,15 @@ def test_protective_mbr_read(new_geometry: Geometry):
 
     pmbr_o = ProtectiveMBR.read(pmbr_bytes, new_geometry)
     assert pmbr_o.boot_indicator == 0
-    assert pmbr_o.start_chs == b"\x00"
+    assert pmbr_o.start_chs == b"\x00\x00\x00"
     assert pmbr_o.partition_type == b"\xEE"
-    assert pmbr_o.end_chs == b"\x00"
+    assert pmbr_o.end_chs == b"\x00\x00\x00"
     assert pmbr_o.start_sector == 1
     assert pmbr_o.partition_size == 4095
     assert pmbr_o.signature == b"\x55\xAA"
 
 
-def test_header_marshall(new_geometry: Geometry):
+def test_header_marshal(new_geometry: Geometry):
     header = Header(
         new_geometry,
         guid=DISK_GUID,
