@@ -8,8 +8,6 @@ from gpt_image.partition import (Partition, PartitionAttribute,
 PART_NAME = "test-part"
 PART_NAME_2 = "partition-2"
 PART_UUID = "26be6d04-85fe-4fae-ba9c-1f47cf16f8d8"
-READ_ONLY_INT = 1152921504606846976
-RO_HIDDEN_INT = 5764607523034234880
 
 
 def test_partition_init_guid():
@@ -22,29 +20,35 @@ def test_partition_init_guid():
 
 def test_partition_repr():
     part = Partition(PART_NAME, 2 * 1024, Partition.LINUX_FILE_SYSTEM)
-    part_s = part.__repr__()
+    part.attribute_flags = PartitionAttribute.READ_ONLY
+    part_s = str(part)
     assert PART_NAME in part_s
     # attributes with leading underscore should not be in __repr__
     assert "_attribute" not in part_s
     part_d = json.loads(part_s)
-    assert part_d.get('partition_name') == PART_NAME
+    assert part_d.get("partition_name") == PART_NAME
+    assert part_d.get("attribute_flags") == [PartitionAttribute.READ_ONLY.value]
 
 
 def test_partition_attribute():
     part = Partition(PART_NAME, 2 * 1024, Partition.LINUX_FILE_SYSTEM)
     # flags are set to NONE by default
-    assert part.attribute_flags == 0
+    assert part.attribute_flags == []
 
     # setting the READ_ONLY flag sets bit 60 which will have an
     # integer value
     part.attribute_flags = PartitionAttribute.READ_ONLY
-    assert part.attribute_flags == READ_ONLY_INT
+    assert part.attribute_flags == [PartitionAttribute.READ_ONLY.value]
     part.attribute_flags = PartitionAttribute.HIDDEN
-    assert part.attribute_flags == RO_HIDDEN_INT
+    # this should return 2 values, HIDDEN and READ_ONLY
+    assert part.attribute_flags == [
+        PartitionAttribute.HIDDEN.value,
+        PartitionAttribute.READ_ONLY.value,
+    ]
 
     # setting NONE should clear all flags
     part.attribute_flags = PartitionAttribute.NONE
-    assert part.attribute_flags == 0
+    assert part.attribute_flags == []
 
 
 def test_partition_marshal():
@@ -57,7 +61,9 @@ def test_partition_marshal():
     assert part_bytes[16:32] == uuid.UUID(PART_UUID).bytes_le
     assert part_bytes[32:40] == b"\x00" * 8
     assert part_bytes[40:48] == b"\x00" * 8
-    assert part_bytes[48:56] == READ_ONLY_INT.to_bytes(8, byteorder="little")
+    assert part_bytes[48:56] == (2**PartitionAttribute.READ_ONLY.value).to_bytes(
+        8, byteorder="little"
+    )
     # pad this to 72 bytes
     assert part_bytes[56:128] == bytes(PART_NAME, encoding="utf_16_le").ljust(
         72, b"\x00"
