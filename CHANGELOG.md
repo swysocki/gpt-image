@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.6.2 (2022-07-25)
+### Fix
+* Add disk image data to string repr ([`2d5b3ef`](https://github.com/swysocki/gpt-image/commit/2d5b3ef7e64705c97f74622b98636b21fdc0de3c))
+
 ## v0.6.1 (2022-07-24)
 ### Fix
 * Return friendly partition attribute flags ([`6fb826f`](https://github.com/swysocki/gpt-image/commit/6fb826f715d74792fae265afe2634349989a0025))
