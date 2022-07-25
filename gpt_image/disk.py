@@ -72,6 +72,9 @@ class Disk:
         # so that we can create a single JSON document
         partition_list = [json.loads(str(p)) for p in self.table.partitions.entries]
         disk_dict = {
+            "path": str(self.image_path),
+            "image_size": self.size,
+            "sector_size": self.sector_size,
             "primary_header": json.loads(str(self.table.primary_header)),
             "backup_header": json.loads(str(self.table.secondary_header)),
             "partitions": partition_list,
