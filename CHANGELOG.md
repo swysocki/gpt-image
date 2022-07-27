@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.6.3 (2022-07-27)
+### Fix
+* Add py.typed to package ([`3b13b41`](https://github.com/swysocki/gpt-image/commit/3b13b41bdcfd3a6d1733264a1d8fd4d90329f388))
+
 ## v0.6.2 (2022-07-25)
 ### Fix
 * Add disk image data to string repr ([`2d5b3ef`](https://github.com/swysocki/gpt-image/commit/2d5b3ef7e64705c97f74622b98636b21fdc0de3c))
