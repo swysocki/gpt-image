@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.6.4 (2022-07-28)
+### Fix
+* Make attributes integer-like ([`1f875cb`](https://github.com/swysocki/gpt-image/commit/1f875cbbf1d0ec973957747b8653fd4445d2d10a))
+
+### Documentation
+* Denote partition UUID in creation step ([`8f768d7`](https://github.com/swysocki/gpt-image/commit/8f768d758eeb1f735f94432adf555b6c927b6ce6))
+
 ## v0.6.3 (2022-07-27)
 ### Fix
 * Add py.typed to package ([`3b13b41`](https://github.com/swysocki/gpt-image/commit/3b13b41bdcfd3a6d1733264a1d8fd4d90329f388))
