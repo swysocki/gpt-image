@@ -1,7 +1,7 @@
 import json
 import struct
 import uuid
-from enum import Enum
+from enum import IntEnum
 from math import ceil
 from typing import List
 
@@ -12,7 +12,7 @@ class PartitionEntryError(Exception):
     """Exception class for erros in partition entries"""
 
 
-class PartitionAttribute(Enum):
+class PartitionAttribute(IntEnum):
     """Supported partition attribute settings
 
     https://en.wikipedia.org/wiki/GUID_Partition_Table#Partition_entries_(LBA_2-33)
@@ -34,6 +34,17 @@ class Partition:
 
     Start and end LBA are set to None because they must be calculated
     from a table's partition list.
+
+    Attibutes:
+        name: string partition name
+        size: integer size of partition in bytes
+        type_guid: string UUID partition type
+        partition_guid: string UUID partition GUID
+        attribute_flags: PartitionAttribute or int of attribute flag bit to set
+            automatically generated
+        first_lba: integer LBA of partition start, automatically calculated 
+        last_lba: integer LBA of partition end, automatically calculated
+        alignment: integer partition block alignment
     """
 
     _PARTITION_FORMAT = struct.Struct("<16s16sQQQ72s")
@@ -49,7 +60,7 @@ class Partition:
         type_guid: str,
         partition_guid: str = "",
         alignment: int = 8,
-        partition_attributes: int = 0,
+        partition_attributes: int = PartitionAttribute.NONE,
     ):
         """Initialize Partition Object"""
         self.type_guid = type_guid
