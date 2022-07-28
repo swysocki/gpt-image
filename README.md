@@ -16,8 +16,8 @@ import gpt_image, uuid
 disk = gpt_image.disk.Disk("disk-image.raw")
 disk.create(8 * 1024 * 1024)
 
-# create a 2MB partition, default is a Linux partition
-partition = gpt_image.partition.Partition("partition1", 2 * 1024 * 1024, uuid.uuid4())
+# create a 2MB Linux partition named "partition1"
+partition = gpt_image.partition.Partition("partition1", 2 * 1024 * 1024, Partition.LINUX_FILE_SYSTEM)
 
 # add the partition to disk
 disk.table.partitions.add(partition)
