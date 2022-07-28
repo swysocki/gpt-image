@@ -38,12 +38,12 @@ def test_partition_attribute():
     # setting the READ_ONLY flag sets bit 60 which will have an
     # integer value
     part.attribute_flags = PartitionAttribute.READ_ONLY
-    assert part.attribute_flags == [PartitionAttribute.READ_ONLY.value]
+    assert part.attribute_flags == [PartitionAttribute.READ_ONLY]
     part.attribute_flags = PartitionAttribute.HIDDEN
     # this should return 2 values, HIDDEN and READ_ONLY
     assert part.attribute_flags == [
-        PartitionAttribute.HIDDEN.value,
-        PartitionAttribute.READ_ONLY.value,
+        PartitionAttribute.HIDDEN,
+        PartitionAttribute.READ_ONLY,
     ]
 
     # setting NONE should clear all flags
