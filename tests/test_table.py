@@ -33,7 +33,7 @@ def test_protective_mbr_read(new_geometry: Geometry):
     pmbr = ProtectiveMBR(new_geometry)
     pmbr_bytes = pmbr.marshal()
 
-    pmbr_o = ProtectiveMBR.read(pmbr_bytes, new_geometry)
+    pmbr_o = ProtectiveMBR.unmarshal(pmbr_bytes, new_geometry)
     assert pmbr_o.boot_indicator == 0
     assert pmbr_o.start_chs == b"\x00"
     assert pmbr_o.partition_type == b"\xEE"
@@ -74,7 +74,7 @@ def test_header_read(new_geometry: Geometry):
     header_b = header.marshal()
     assert len(header_b) == new_geometry.sector_size
 
-    header_o = Header.read(header_b[: Header._HEADER_SIZE], new_geometry)
+    header_o = Header.unmarshal(header_b[: Header._HEADER_SIZE], new_geometry)
     assert header_o.signature == Header._SIGNATURE
     assert header_o.revision == Header._REVISION
     assert header_o.header_size == Header._HEADER_SIZE
