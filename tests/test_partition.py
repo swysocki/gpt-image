@@ -78,7 +78,7 @@ def test_partition_read():
     )
     part_array.add(part)
     part_bytes = part.marshal()
-    new_part = Partition.read(part_bytes, geo.sector_size)
+    new_part = Partition.unmarshal(part_bytes, geo.sector_size)
     assert new_part.partition_name == PART_NAME
     assert new_part.size == 2 * 1024
     assert new_part.type_guid.upper() == Partition.LINUX_FILE_SYSTEM
@@ -126,7 +126,7 @@ def test_partition_entry_marshall():
     )
     part1_bytes = part_array_bytes[:128]
     part2_bytes = part_array_bytes[128:256]
-    part1_unmarshal = Partition.read(part1_bytes, geo.sector_size)
-    part2_unmarshal = Partition.read(part2_bytes, geo.sector_size)
+    part1_unmarshal = Partition.unmarshal(part1_bytes, geo.sector_size)
+    part2_unmarshal = Partition.unmarshal(part2_bytes, geo.sector_size)
     assert part1_unmarshal.partition_name == PART_NAME
     assert part2_unmarshal.partition_name == PART_NAME_2

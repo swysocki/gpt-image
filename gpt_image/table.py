@@ -60,7 +60,7 @@ class ProtectiveMBR:
         return pmbr_bytes
 
     @staticmethod
-    def read(pmbr_bytes: bytes, geometry: Geometry) -> "ProtectiveMBR":
+    def unmarshal(pmbr_bytes: bytes, geometry: Geometry) -> "ProtectiveMBR":
         (
             _,
             boot_indicator,
@@ -158,7 +158,7 @@ class Header:
         return header_bytes + padding
 
     @staticmethod
-    def read(header_bytes: bytes, geometry: Geometry) -> "Header":
+    def unmarshal(header_bytes: bytes, geometry: Geometry) -> "Header":
         (
             signature,
             revision,

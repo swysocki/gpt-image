@@ -42,9 +42,9 @@ class Disk:
             + self.geometry.header_length
         ]
         self.table.primary_header = Header(self.geometry)
-        self.table.primary_header.read(primary_header_b, self.geometry)
+        self.table.primary_header.unmarshal(primary_header_b, self.geometry)
         self.table.secondary_header = Header(self.geometry, is_backup=True)
-        self.table.secondary_header.read(backup_header_b, self.geometry)
+        self.table.secondary_header.unmarshal(backup_header_b, self.geometry)
         # read the partition tables
         primary_part_table_b = disk_bytes[
             self.geometry.primary_array_byte : self.geometry.primary_array_byte
@@ -63,7 +63,7 @@ class Disk:
             partition_bytes = primary_part_table_b[
                 offset : offset + PartitionEntryArray.EntryLength
             ]
-            new_part = Partition.read(partition_bytes, self.geometry.sector_size)
+            new_part = Partition.unmarshal(partition_bytes, self.geometry.sector_size)
             if new_part.type_guid != Partition._EMPTY_GUID:
                 self.table.partitions.entries.append(new_part)
 

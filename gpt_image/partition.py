@@ -42,7 +42,7 @@ class Partition:
         partition_guid: string UUID partition GUID
         attribute_flags: PartitionAttribute or int of attribute flag bit to set
             automatically generated
-        first_lba: integer LBA of partition start, automatically calculated 
+        first_lba: integer LBA of partition start, automatically calculated
         last_lba: integer LBA of partition end, automatically calculated
         alignment: integer partition block alignment
     """
@@ -65,7 +65,6 @@ class Partition:
         """Initialize Partition Object"""
         self.type_guid = type_guid
         self.partition_name = name
-        self._attribute_flags = 0
         self.partition_guid = partition_guid
         # if the partition GUID is empty, generate one
         if not partition_guid:
@@ -78,7 +77,7 @@ class Partition:
 
     def __repr__(self) -> str:
         partitionvalue = {k: v for k, v in vars(self).items() if not k.startswith("_")}
-        partitionvalue['attribute_flags'] = self.attribute_flags
+        partitionvalue["attribute_flags"] = self.attribute_flags
         return json.dumps(partitionvalue, indent=2, ensure_ascii=False)
 
     @property
@@ -112,7 +111,7 @@ class Partition:
         """Marshal to byte structure"""
         attributes_value = 0
         for attrib in self.attribute_flags:
-            attributes_value += 2**attrib
+            attributes_value += 2 ** attrib
         partition_bytes = self._PARTITION_FORMAT.pack(
             uuid.UUID(self.type_guid).bytes_le,
             uuid.UUID(self.partition_guid).bytes_le,
@@ -124,7 +123,7 @@ class Partition:
         return partition_bytes
 
     @staticmethod
-    def read(partition_bytes: bytes, sector_size: int) -> "Partition":
+    def unmarshal(partition_bytes: bytes, sector_size: int) -> "Partition":
         """Create a Partition object from existing bytes"""
         if len(partition_bytes) != PartitionEntryArray.EntryLength:
             raise ValueError(f"Invalid Partition Entry length: {len(partition_bytes)}")
