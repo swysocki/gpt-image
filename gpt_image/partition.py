@@ -32,8 +32,8 @@ class PartitionAttribute(IntEnum):
 class Partition:
     """Partition class represents a GPT partition
 
-    Start and end LBA are set to None because they must be calculated
-    from a table's partition list.
+    Start and end LBA are set to None because they must be calculated from a table's
+    partition list.
 
     Attibutes:
         name: string partition name
@@ -84,9 +84,11 @@ class Partition:
     def attribute_flags(self) -> List[int]:
         """Return a list of partition attribute flags
 
-        Returns an empty list if no attributes are set
-
+        Returns:
+            List of attribute flags as integers, returns an empty list if no attributes
+                are set
         """
+
         flags = []
         flag_int = self._attribute_flags
         while flag_int:
@@ -99,19 +101,28 @@ class Partition:
     def attribute_flags(self, flag: PartitionAttribute):
         """Set the partition attribute flag
 
-        Sets the bit corresponding to the PartitionAttribute Class.
-        If the PartitionAttribute.NONE value is set, this clears all flags
+        Sets the bit corresponding to the PartitionAttribute Class. If the
+            PartitionAttribute.NONE value is set, this clears all flags
+
+        Args:
+            flag: integer value of partition attribute flags
         """
+
         if flag.value == 0:
             self._attribute_flags = 0
         else:
             self._attribute_flags = self._attribute_flags | (1 << flag.value)
 
     def marshal(self) -> bytes:
-        """Marshal to byte structure"""
+        """Marshal to byte structure
+
+        Returns:
+            Partition object represented as bytes
+        """
+
         attributes_value = 0
         for attrib in self.attribute_flags:
-            attributes_value += 2 ** attrib
+            attributes_value += 2**attrib
         partition_bytes = self._PARTITION_FORMAT.pack(
             uuid.UUID(self.type_guid).bytes_le,
             uuid.UUID(self.partition_guid).bytes_le,
@@ -124,7 +135,15 @@ class Partition:
 
     @staticmethod
     def unmarshal(partition_bytes: bytes, sector_size: int) -> "Partition":
-        """Create a Partition object from existing bytes"""
+        """Create a Partition object from existing bytes
+
+        Args:
+            partition_bytes: is a bytes string representing a GPT partition entry
+            sector_size: disk sectore size in bytes
+        Returns:
+            an instance of the Partition class
+        """
+
         if len(partition_bytes) != PartitionEntryArray.EntryLength:
             raise ValueError(f"Invalid Partition Entry length: {len(partition_bytes)}")
         (
@@ -162,9 +181,13 @@ class PartitionEntryArray:
     def add(self, partition: Partition) -> None:
         """Add a partition to the entries
 
-        Appends the Partition to the next available entry. Calculates the
-        LBA's
+        Appends the Partition to the next available entry. Calculates the LBA's and
+        writes them to the partition object's attributes.
+
+        Args:
+            partition: instance of the Partition class to add to the entry table
         """
+
         partition.first_lba = self._get_first_lba(partition)
         partition.last_lba = self._get_last_lba(partition)
         self.entries.append(partition)
@@ -178,6 +201,10 @@ class PartitionEntryArray:
 
         The start sector (LBA) will take the alignment into account.
 
+        Args:
+            partition: instance of the Partition class to calculate LBA for
+        Returns:
+            integer of the first LBA
         """
 
         def next_lba(end_lba: int, alignment: int):
@@ -197,7 +224,14 @@ class PartitionEntryArray:
 
         The last LBA will always be the -1 from the total partition LBA
 
+        Args:
+            partition: instance of the Partition class to calculate LBA for
+        Returns:
+            integer of the last LBA
+        Raises:
+            PartitionEntryError if the target partition smaller than a sector
         """
+
         if partition.size < self._geometry.sector_size:
             raise PartitionEntryError("Partition smaller than sector size")
 
@@ -207,7 +241,12 @@ class PartitionEntryArray:
         return (f_lba + lba) - 1
 
     def marshal(self) -> bytes:
-        """Convert the Partition Entry Array to its byte structure"""
+        """Convert the Partition Entry Array to its byte structure
+
+        Returns:
+            bytes representation of the Partition Entry Array
+        """
+
         parts = [x.marshal() for x in self.entries]
         part_bytes = b"".join(parts)
         # pad the rest with zeros
