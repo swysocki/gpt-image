@@ -21,13 +21,24 @@ class Disk:
     """
 
     def __init__(self, image_path: str, sector_size: int = 512) -> None:
-        """Init Disk with a file path"""
+        """Init Disk with a file path
+
+        Args:
+            image_path: path a new or existing disk image
+            sector_size: disk sector size in bytes (default 512 Bytes)
+        """
+
         self.image_path = pathlib.Path(image_path)
         self.name = self.image_path.name
         self.sector_size = sector_size
 
     def open(self):
-        """Read existing GPT disk Table"""
+        """Read existing GPT disk table
+
+        Raises:
+            TableReadError if primary and backup tables do not match
+        """
+
         disk_bytes = self.image_path.read_bytes()
         self.size = self.image_path.stat().st_size
         self.geometry = Geometry(self.size, self.sector_size)
@@ -56,8 +67,8 @@ class Disk:
         ]
         if primary_part_table_b != backup_part_table_b:
             raise TableReadError("primary and backup table do not match")
-        # unmarshal the partition bytes to objects
-        # add the partition to the entry list if the type_guid is valid
+        # unmarshal the partition bytes to objects and add the partition to the entry
+        # list if the type_guid is valid
         for i in range(PartitionEntryArray.EntryCount):
             offset = i * PartitionEntryArray.EntryLength
             partition_bytes = primary_part_table_b[
@@ -68,8 +79,8 @@ class Disk:
                 self.table.partitions.entries.append(new_part)
 
     def __repr__(self):
-        # objects will be in the form of JSON strings, convert them to dicts
-        # so that we can create a single JSON document
+        # objects will be in the form of JSON strings, convert them to dicts so that we
+        # can create a single JSON document
         partition_list = [json.loads(str(p)) for p in self.table.partitions.entries]
         disk_dict = {
             "path": str(self.image_path),
@@ -84,10 +95,13 @@ class Disk:
     def create(self, size: int):
         """Create the disk image on Disk
 
-        Creates the basic image structure at the specified path. This zeros
-        the disk and writes the protective MBR.
+        Creates the basic image structure at the specified path. This zeros the disk
+        and writes the protective MBR.
 
+        Args:
+            size in bytes
         """
+
         self.image_path.touch(exist_ok=False)
         self.size = size
         self.geometry = Geometry(self.size, self.sector_size)
@@ -100,13 +114,13 @@ class Disk:
             f.write(self.table.protective_mbr.marshal())
         self.write()
 
-    def write(self):
+    def write(self) -> None:
         """Write the GPT information to disk
 
-        Writes the GPT header and partition tables to disk. Actions that
-        happen before this are not written to disk.
-
+        Writes the GPT header and partition tables to disk. Actions that happen before
+        this are not written to disk.
         """
+
         self.table.update()
         with open(self.image_path, "r+b") as f:
             # write primary header
@@ -126,16 +140,19 @@ class Disk:
             f.write(self.table.partitions.marshal())
 
     def write_data(self, data: bytes, partition: Partition, offset: int = 0) -> None:
-        # @NOTE: this isn't a GPT function. Writing data should be outside the
-        # scope of this module
-        """Write data to disk
+        # @NOTE: this isn't a GPT function. Writing data should be outside the scope of
+        # this module
+        """Write data to a disk partition
 
         Args:
             data: data to write to partition. only bytes supported
-            partition: Partition object to write data to
+            partition: Partition object data will be written to
             offset: byte offset for writing data. The default is 0 but can be set to
                 support custom offsets
+        Raises:
+            ValueError if data not is not bytes
         """
+
         if not type(data) is bytes:
             raise ValueError(f"data must be of type bytes. found type: {type(data)}")
 
