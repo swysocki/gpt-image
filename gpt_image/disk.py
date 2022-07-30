@@ -32,7 +32,7 @@ class Disk:
         self.name = self.image_path.name
         self.sector_size = sector_size
 
-    def open(self):
+    def open(self) -> None:
         """Read existing GPT disk table
 
         Raises:
@@ -78,7 +78,7 @@ class Disk:
             if new_part.type_guid != Partition._EMPTY_GUID:
                 self.table.partitions.entries.append(new_part)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         # objects will be in the form of JSON strings, convert them to dicts so that we
         # can create a single JSON document
         partition_list = [json.loads(str(p)) for p in self.table.partitions.entries]
@@ -92,7 +92,7 @@ class Disk:
         }
         return json.dumps(disk_dict, indent=2, ensure_ascii=False)
 
-    def create(self, size: int):
+    def create(self, size: int) -> None:
         """Create the disk image on Disk
 
         Creates the basic image structure at the specified path. This zeros the disk
