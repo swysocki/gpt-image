@@ -98,7 +98,7 @@ class Partition:
         return flags
 
     @attribute_flags.setter
-    def attribute_flags(self, flag: PartitionAttribute):
+    def attribute_flags(self, flag: PartitionAttribute) -> None:
         """Set the partition attribute flag
 
         Sets the bit corresponding to the PartitionAttribute Class. If the
@@ -207,7 +207,7 @@ class PartitionEntryArray:
             integer of the first LBA
         """
 
-        def next_lba(end_lba: int, alignment: int):
+        def next_lba(end_lba: int, alignment: int) -> int:
             m = int(end_lba / alignment)
             return (m + 1) * alignment
 
