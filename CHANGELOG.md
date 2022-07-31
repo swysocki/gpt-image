@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.6.5 (2022-07-31)
+### Fix
+* Add types tests to CI ([`fee4da6`](https://github.com/swysocki/gpt-image/commit/fee4da6d99392c69a5efffdbb8c09324e93eab07))
+
 ## v0.6.4 (2022-07-28)
 ### Fix
 * Make attributes integer-like ([`1f875cb`](https://github.com/swysocki/gpt-image/commit/1f875cbbf1d0ec973957747b8653fd4445d2d10a))
