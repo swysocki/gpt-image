@@ -210,7 +210,9 @@ class Table:
         self._geometry = geometry
         self.protective_mbr: ProtectiveMBR = ProtectiveMBR(self._geometry)
         self.primary_header: Header = Header(self._geometry)
-        self.secondary_header: Header = Header(self._geometry, is_backup=True)
+        self.secondary_header: Header = Header(
+            self._geometry, guid=self.primary_header.disk_guid, is_backup=True
+        )
         self.partitions: PartitionEntryArray = PartitionEntryArray(self._geometry)
 
     def update(self) -> None:

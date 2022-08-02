@@ -94,6 +94,7 @@ def test_table_init(new_geometry):
     table = Table(geo)
     assert table.primary_header.backup is False
     assert table.secondary_header.backup is True
+    assert table.primary_header.disk_guid == table.secondary_header.disk_guid
 
 
 def test_checksum_partitions(new_geometry):
