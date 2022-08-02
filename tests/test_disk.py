@@ -18,7 +18,7 @@ def new_image(tmp_path):
     part2 = Partition("partition2", 3 * 1024, Partition.LINUX_FILE_SYSTEM)
     disk.table.partitions.add(part1)
     disk.table.partitions.add(part2)
-    disk.write()
+    disk.commit()
     return image_name
 
 

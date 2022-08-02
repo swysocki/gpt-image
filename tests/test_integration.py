@@ -30,7 +30,7 @@ def create_image(tmp_path):
     part2 = Partition(PART2_NAME, PART2_SIZE, Partition.LINUX_FILE_SYSTEM, STATIC_UUID)
     new_disk.table.partitions.add(part2)
 
-    new_disk.write()
+    new_disk.commit()
     return image
 
 
