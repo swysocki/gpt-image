@@ -139,25 +139,3 @@ class Disk:
             f.seek(self.geometry.alternate_array_byte)
             f.write(self.table.partitions.marshal())
 
-    def write_data(self, data: bytes, partition: Partition, offset: int = 0) -> None:
-        # @NOTE: this isn't a GPT function. Writing data should be outside the scope of
-        # this module
-        """Write data to a disk partition
-
-        Args:
-            data: data to write to partition. only bytes supported
-            partition: Partition object data will be written to
-            offset: byte offset for writing data. The default is 0 but can be set to
-                support custom offsets
-        Raises:
-            ValueError if data not is not bytes
-        """
-
-        if not type(data) is bytes:
-            raise ValueError(f"data must be of type bytes. found type: {type(data)}")
-
-        with open(self.image_path, "r+b") as f:
-            start_byte = int(partition.first_lba * self.sector_size)
-            with open(self.image_path, "r+b") as f:
-                f.seek(start_byte + offset)
-                f.write(data)
