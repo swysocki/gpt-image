@@ -112,10 +112,10 @@ class Disk:
             f.write(b"\x00" * self.size)
             f.seek(0)
             f.write(self.table.protective_mbr.marshal())
-        self.write()
+        self.commit()
 
-    def write(self) -> None:
-        """Write the GPT information to disk
+    def commit(self) -> None:
+        """Commit the GPT information to disk
 
         Writes the GPT header and partition tables to disk. Actions that happen before
         this are not written to disk.
@@ -138,4 +138,3 @@ class Disk:
             # write secondary partition table
             f.seek(self.geometry.alternate_array_byte)
             f.write(self.table.partitions.marshal())
-
