@@ -36,8 +36,14 @@ def create_image(tmp_path):
 
 @pytest.mark.skipif(sys.platform != "linux", reason="requires linux to run")
 @pytest.mark.skipif(shutil.which("sfdisk") is None, reason="requires sfdisk utility")
+@pytest.mark.skipif(shutil.which("sgdisk") is None, reason="requires sgdisk utility")
 def test_sfdisk(create_image):
     sfdisk = shutil.which("sfdisk")
+    sgdisk = shutil.which("sgdisk")
+    result = subprocess.run(
+        [sgdisk, "-v", create_image], capture_output=True, text=True
+    )
+    assert "no problems found" in (result.stdout).lower()
     result = subprocess.run(
         [sfdisk, "--json", create_image], capture_output=True, text=True
     )
