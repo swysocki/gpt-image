@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.6.6 (2022-08-02)
+### Fix
+* Ensure disk GUID's match in header ([`5b7503f`](https://github.com/swysocki/gpt-image/commit/5b7503fd9bab243958d6dc2470d4a9b255d5084f))
+
+### Documentation
+* Update quick start example ([`d28dd28`](https://github.com/swysocki/gpt-image/commit/d28dd281f94cced2ce32350eb0f560fe079fc408))
+
 ## v0.6.5 (2022-07-31)
 ### Fix
 * Add types tests to CI ([`fee4da6`](https://github.com/swysocki/gpt-image/commit/fee4da6d99392c69a5efffdbb8c09324e93eab07))
