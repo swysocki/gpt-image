@@ -8,6 +8,12 @@ This is useful for creating a disk image on SD Cards or embedded devices.
 
 ## Quick Start
 
+### Installation
+
+`pip install gpt-image`
+
+### Create a GPT disk image
+
 ```python
 
 import gpt_image
@@ -18,30 +24,29 @@ disk.create(16 * 1024 * 1024)
 
 # create a 2MB Linux partition named "boot"
 boot_part = gpt_image.partition.Partition(
-		"boot", 
-		2 * 1024 * 1024, 
-		gpt_image.partition.Partition.EFI_SYSTEM_PARTITION
-	)
+        "boot", 
+        2 * 1024 * 1024, 
+        gpt_image.partition.Partition.EFI_SYSTEM_PARTITION
+    )
 disk.table.partitions.add(boot_part)
 
 # create an 8MB Linux partition named "data"
 data_part = gpt_image.partition.Partition(
-		"data", 
-		8 * 1024 * 1024, 
-		gpt_image.partition.Partition.LINUX_FILE_SYSTEM
-	)
+        "data", 
+        8 * 1024 * 1024, 
+        gpt_image.partition.Partition.LINUX_FILE_SYSTEM
+    )
 disk.table.partitions.add(data_part)
 
 # commit the change to disk
-disk.write()
+disk.commit()
 
 # dump the current GPT information:
 
 print(disk)
 ```
 
-The final `print(disk)` command will output a JSON document of the current GPT
-configuration:
+The final `print(disk)` command outputs a JSON document of the current GPT configuration:
 
 ```json
 {
