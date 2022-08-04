@@ -16,25 +16,26 @@ This is useful for creating a disk image on SD Cards or embedded devices.
 
 ```python
 
-import gpt_image
+from gpt_image.disk import Disk
+from gpt_image.partition import Partition
 
 # create a new, 16 MB disk, size is in bytes
-disk = gpt_image.disk.Disk("disk-image.raw")
+disk = Disk("disk-image.raw")
 disk.create(16 * 1024 * 1024)
 
 # create a 2MB Linux partition named "boot"
-boot_part = gpt_image.partition.Partition(
+boot_part = Partition(
         "boot", 
         2 * 1024 * 1024, 
-        gpt_image.partition.Partition.EFI_SYSTEM_PARTITION
+        Partition.EFI_SYSTEM_PARTITION
     )
 disk.table.partitions.add(boot_part)
 
 # create an 8MB Linux partition named "data"
-data_part = gpt_image.partition.Partition(
+data_part = Partition(
         "data", 
         8 * 1024 * 1024, 
-        gpt_image.partition.Partition.LINUX_FILE_SYSTEM
+        Partition.LINUX_FILE_SYSTEM
     )
 disk.table.partitions.add(data_part)
 
