@@ -139,7 +139,7 @@ class Partition:
 
         Args:
             partition_bytes: is a bytes string representing a GPT partition entry
-            sector_size: disk sectore size in bytes
+            sector_size: disk sector size in bytes
         Returns:
             an instance of the Partition class
         """
@@ -184,12 +184,25 @@ class PartitionEntryArray:
         Appends the Partition to the next available entry. Calculates the LBA's and
         writes them to the partition object's attributes.
 
+        Tests that there is enough space to create the partition with in GPT table
+        boundaries.  If the partition would extend beyond last usable LBA an exception
+        is raised.
+
         Args:
             partition: instance of the Partition class to add to the entry table
+        Raises:
+            PartitionEntryError if the partition will not fit within the table
+                boundaries
         """
 
         partition.first_lba = self._get_first_lba(partition)
         partition.last_lba = self._get_last_lba(partition)
+
+        if partition.last_lba > self._geometry.last_usable_lba:
+            raise PartitionEntryError(
+                "partition overflows the last allowed Logical Block Address: "
+                f"{self._geometry.last_usable_lba} requested: {partition.last_lba}"
+            )
         self.entries.append(partition)
 
     def _get_first_lba(self, partition: Partition) -> int:

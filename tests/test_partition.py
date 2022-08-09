@@ -1,9 +1,15 @@
 import json
 import uuid
 
+import pytest
+
 from gpt_image.geometry import Geometry
-from gpt_image.partition import (Partition, PartitionAttribute,
-                                 PartitionEntryArray)
+from gpt_image.partition import (
+    Partition,
+    PartitionAttribute,
+    PartitionEntryArray,
+    PartitionEntryError,
+)
 
 PART_NAME = "test-part"
 PART_NAME_2 = "partition-2"
@@ -103,12 +109,20 @@ def test_partition_entry_add():
     assert len(part_array.entries) == 2
 
 
-def test_get_first_lba():
-    pass
+def test_partition_entry_add_too_large():
+    geo = Geometry(8 * 1024 * 1024)
+    part_array = PartitionEntryArray(geo)
+    part1 = Partition("part1", 2 * 1024 * 1024, Partition.LINUX_FILE_SYSTEM)
+    part2 = Partition("part2", 10 * 1024 * 1024, Partition.LINUX_FILE_SYSTEM)
+    part3 = Partition("part3", 5 * 1024 * 1024, Partition.LINUX_FILE_SYSTEM)
 
-
-def test_get_last_lba():
-    pass
+    # this should fit
+    part_array.add(part1)
+    # this will raise an error
+    with pytest.raises(PartitionEntryError):
+        part_array.add(part2)
+    # this will fit within the disk LBA boundaries
+    part_array.add(part3)
 
 
 def test_partition_entry_marshall():
