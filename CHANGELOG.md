@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.6.7 (2022-08-09)
+### Fix
+* Raise an error if partition is too large ([`f4b1fca`](https://github.com/swysocki/gpt-image/commit/f4b1fcae926d1ce32f2c5fa415fcb4404d268cba))
+
 ## v0.6.6 (2022-08-02)
 ### Fix
 * Ensure disk GUID's match in header ([`5b7503f`](https://github.com/swysocki/gpt-image/commit/5b7503fd9bab243958d6dc2470d4a9b255d5084f))
