@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.6.8 (2022-09-10)
+### Fix
+* Add partition GUID for Linux, Windows, Mac ([`e45c102`](https://github.com/swysocki/gpt-image/commit/e45c10221e952a84967b254962b9a6d0b75490a3))
+
 ## v0.6.7 (2022-08-09)
 ### Fix
 * Raise an error if partition is too large ([`f4b1fca`](https://github.com/swysocki/gpt-image/commit/f4b1fcae926d1ce32f2c5fa415fcb4404d268cba))
