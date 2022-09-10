@@ -2,11 +2,11 @@ import json
 import shutil
 import subprocess
 import sys
-import uuid
 
 import pytest
+
 from gpt_image import disk
-from gpt_image.partition import Partition, PartitionAttribute
+from gpt_image.partition import Partition, PartitionAttribute, PartitionType
 
 STATIC_UUID = "4133e7fe-0be9-4097-b617-e3373fa0535e"
 DISK_SIZE = 2 * 1024 * 1024  # (2MB)
@@ -23,11 +23,13 @@ def create_image(tmp_path):
     # this should produce a disk that can be opened and validated with GPT tools
     new_disk = disk.Disk(image)
     new_disk.create(DISK_SIZE)
-    part1 = Partition(PART1_NAME, PART1_SIZE, Partition.LINUX_FILE_SYSTEM)
+    part1 = Partition(PART1_NAME, PART1_SIZE, PartitionType.LINUX_FILE_SYSTEM.value)
     part1.attribute_flags = PartitionAttribute.HIDDEN
     new_disk.table.partitions.add(part1)
 
-    part2 = Partition(PART2_NAME, PART2_SIZE, Partition.LINUX_FILE_SYSTEM, STATIC_UUID)
+    part2 = Partition(
+        PART2_NAME, PART2_SIZE, PartitionType.LINUX_FILE_SYSTEM.value, STATIC_UUID
+    )
     new_disk.table.partitions.add(part2)
 
     new_disk.commit()

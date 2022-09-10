@@ -3,7 +3,7 @@ import json
 import pytest
 
 from gpt_image.disk import Disk
-from gpt_image.partition import Partition
+from gpt_image.partition import Partition, PartitionType
 
 BYTE_DATA = b"\x01\x02\x03\x04"
 DISK_SIZE = 4 * 1024 * 1024  # 4 MB
@@ -14,8 +14,8 @@ def new_image(tmp_path):
     image_name = tmp_path / "test.img"
     disk = Disk(image_name)
     disk.create(DISK_SIZE)
-    part1 = Partition("partition1", 2 * 1024, Partition.LINUX_FILE_SYSTEM)
-    part2 = Partition("partition2", 3 * 1024, Partition.LINUX_FILE_SYSTEM)
+    part1 = Partition("partition1", 2 * 1024, PartitionType.LINUX_FILE_SYSTEM.value)
+    part2 = Partition("partition2", 3 * 1024, PartitionType.LINUX_FILE_SYSTEM.value)
     disk.table.partitions.add(part1)
     disk.table.partitions.add(part2)
     disk.commit()

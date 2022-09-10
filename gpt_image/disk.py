@@ -2,7 +2,7 @@ import json
 import pathlib
 
 from gpt_image.geometry import Geometry
-from gpt_image.partition import Partition, PartitionEntryArray
+from gpt_image.partition import Partition, PartitionEntryArray, PartitionType
 from gpt_image.table import Header, Table
 
 
@@ -75,7 +75,7 @@ class Disk:
                 offset : offset + PartitionEntryArray.EntryLength
             ]
             new_part = Partition.unmarshal(partition_bytes, self.geometry.sector_size)
-            if new_part.type_guid != Partition._EMPTY_GUID:
+            if new_part.type_guid != PartitionType.UNUSED.value:
                 self.table.partitions.entries.append(new_part)
 
     def __repr__(self) -> str:
