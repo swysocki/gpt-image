@@ -32,8 +32,9 @@ def test_disk_create(tmp_path):
 
 
 def test_disk_open(new_image):
-    disk = Disk(new_image)
-    disk.open()
+    with pytest.raises(Exception):
+        Disk.open("/not/real/path.img")
+    disk = Disk.open(new_image)
     assert disk.size == DISK_SIZE
     assert disk.table.primary_header.backup is False
     assert disk.table.secondary_header.backup is True
@@ -44,8 +45,7 @@ def test_disk_open(new_image):
 
 
 def test_disk_info(new_image):
-    disk = Disk(new_image)
-    disk.open()
+    disk = Disk.open(new_image)
     disk_s = str(disk)
     disk_d = json.loads(disk_s)
     assert disk_d["path"] == str(new_image)

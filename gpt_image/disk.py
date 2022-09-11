@@ -1,4 +1,5 @@
 import json
+import os
 import pathlib
 
 from gpt_image.geometry import Geometry
@@ -7,7 +8,11 @@ from gpt_image.table import Header, Table
 
 
 class TableReadError(Exception):
-    pass
+    """Error reading partition table"""
+
+
+class DiskReadError(Exception):
+    """Error reading disk image"""
 
 
 class Disk:
@@ -32,38 +37,43 @@ class Disk:
         self.name = self.image_path.name
         self.sector_size = sector_size
 
-    def open(self) -> None:
+    @staticmethod
+    def open(image_path: str) -> "Disk":
         """Read existing GPT disk table
 
         Raises:
+            DiskReadError: if disk image cannot be found
             TableReadError if primary and backup tables do not match
         """
 
-        disk_bytes = self.image_path.read_bytes()
-        self.size = self.image_path.stat().st_size
-        self.geometry = Geometry(self.size, self.sector_size)
-        self.table = Table(self.geometry)
+        if not os.path.isfile(image_path):
+            raise DiskReadError(f"unable to open disk: {image_path}")
+        disk = Disk(image_path)
+        disk_bytes = disk.image_path.read_bytes()
+        disk.size = disk.image_path.stat().st_size
+        disk.geometry = Geometry(disk.size, disk.sector_size)
+        disk.table = Table(disk.geometry)
         # read the headers
         primary_header_b = disk_bytes[
-            self.geometry.primary_header_byte : self.geometry.primary_header_byte
-            + self.geometry.header_length
+            disk.geometry.primary_header_byte : disk.geometry.primary_header_byte
+            + disk.geometry.header_length
         ]
         backup_header_b = disk_bytes[
-            self.geometry.alternate_header_byte : self.geometry.alternate_header_byte
-            + self.geometry.header_length
+            disk.geometry.alternate_header_byte : disk.geometry.alternate_header_byte
+            + disk.geometry.header_length
         ]
-        self.table.primary_header = Header(self.geometry)
-        self.table.primary_header.unmarshal(primary_header_b, self.geometry)
-        self.table.secondary_header = Header(self.geometry, is_backup=True)
-        self.table.secondary_header.unmarshal(backup_header_b, self.geometry)
+        disk.table.primary_header = Header(disk.geometry)
+        disk.table.primary_header.unmarshal(primary_header_b, disk.geometry)
+        disk.table.secondary_header = Header(disk.geometry, is_backup=True)
+        disk.table.secondary_header.unmarshal(backup_header_b, disk.geometry)
         # read the partition tables
         primary_part_table_b = disk_bytes[
-            self.geometry.primary_array_byte : self.geometry.primary_array_byte
-            + self.geometry.array_max_length
+            disk.geometry.primary_array_byte : disk.geometry.primary_array_byte
+            + disk.geometry.array_max_length
         ]
         backup_part_table_b = disk_bytes[
-            self.geometry.alternate_array_byte : self.geometry.alternate_array_byte
-            + self.geometry.array_max_length
+            disk.geometry.alternate_array_byte : disk.geometry.alternate_array_byte
+            + disk.geometry.array_max_length
         ]
         if primary_part_table_b != backup_part_table_b:
             raise TableReadError("primary and backup table do not match")
@@ -74,9 +84,10 @@ class Disk:
             partition_bytes = primary_part_table_b[
                 offset : offset + PartitionEntryArray.EntryLength
             ]
-            new_part = Partition.unmarshal(partition_bytes, self.geometry.sector_size)
+            new_part = Partition.unmarshal(partition_bytes, disk.geometry.sector_size)
             if new_part.type_guid != PartitionType.UNUSED.value:
-                self.table.partitions.entries.append(new_part)
+                disk.table.partitions.entries.append(new_part)
+        return disk
 
     def __repr__(self) -> str:
         # objects will be in the form of JSON strings, convert them to dicts so that we
