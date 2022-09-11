@@ -17,7 +17,7 @@ This is useful for creating a disk image on SD Cards or embedded devices.
 ```python
 
 from gpt_image.disk import Disk
-from gpt_image.partition import Partition
+from gpt_image.partition import Partition, PartitionType
 
 # create a new, 16 MB disk, size is in bytes
 disk = Disk("disk-image.raw")
@@ -27,7 +27,7 @@ disk.create(16 * 1024 * 1024)
 boot_part = Partition(
         "boot", 
         2 * 1024 * 1024, 
-        Partition.EFI_SYSTEM_PARTITION
+        PartitionType.EFI_SYSTEM_PARTITION.value
     )
 disk.table.partitions.add(boot_part)
 
@@ -35,7 +35,7 @@ disk.table.partitions.add(boot_part)
 data_part = Partition(
         "data", 
         8 * 1024 * 1024, 
-        Partition.LINUX_FILE_SYSTEM
+        PartitionType.LINUX_FILE_SYSTEM.value
     )
 disk.table.partitions.add(data_part)
 
