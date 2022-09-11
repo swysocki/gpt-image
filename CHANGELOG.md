@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.7.0 (2022-09-11)
+### Feature
+* Change disk open API ([`5259629`](https://github.com/swysocki/gpt-image/commit/525962940e1fc25cd217d0d46a84f3c6963d963f))
+
+### Documentation
+* Update partition type to use enum ([`bf5ddbc`](https://github.com/swysocki/gpt-image/commit/bf5ddbc823311a9697ffd0af7a2aa3584b441786))
+
 ## v0.6.8 (2022-09-10)
 ### Fix
 * Add partition GUID for Linux, Windows, Mac ([`e45c102`](https://github.com/swysocki/gpt-image/commit/e45c10221e952a84967b254962b9a6d0b75490a3))
