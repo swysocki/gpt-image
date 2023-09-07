@@ -4,9 +4,13 @@ import uuid
 import pytest
 
 from gpt_image.geometry import Geometry
-from gpt_image.partition import (Partition, PartitionAttribute,
-                                 PartitionEntryArray, PartitionEntryError,
-                                 PartitionType)
+from gpt_image.partition import (
+    Partition,
+    PartitionAttribute,
+    PartitionEntryArray,
+    PartitionEntryError,
+    PartitionType,
+)
 
 PART_NAME = "test-part"
 PART_NAME_2 = "partition-2"
@@ -155,3 +159,16 @@ def test_partition_entry_marshall():
     part2_unmarshal = Partition.unmarshal(part2_bytes, geo.sector_size)
     assert part1_unmarshal.partition_name == PART_NAME
     assert part2_unmarshal.partition_name == PART_NAME_2
+
+
+def test_partition_find():
+    geo = Geometry(8 * 1024 * 1024)
+    part_array = PartitionEntryArray(geo)
+    part1 = Partition(PART_NAME, 2 * 1024, PartitionType.LINUX_FILE_SYSTEM.value)
+    part2 = Partition(PART_NAME_2, 3 * 1024, PartitionType.LINUX_FILE_SYSTEM.value)
+    part_array.add(part1)
+    part_array.add(part2)
+    test_part = part_array.find(PART_NAME)
+    assert test_part.partition_name == PART_NAME
+    assert test_part.size == 2 * 1024
+    assert test_part.type_guid == PartitionType.LINUX_FILE_SYSTEM.value
