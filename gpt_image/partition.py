@@ -3,7 +3,7 @@ import struct
 import uuid
 from enum import Enum, IntEnum
 from math import ceil
-from typing import List
+from typing import List, Optional
 
 from gpt_image.geometry import Geometry
 
@@ -311,3 +311,16 @@ class PartitionEntryArray:
             - len(part_bytes)
         )
         return padded
+
+    def find(self, partition_name: str) -> Optional[Partition]:
+        """Find a Partition by name
+
+        Args:
+            partition_name: string name of partition to search for
+        Returns:
+            the partition instance or None if not found
+        """
+        for partition in self.entries:
+            if partition.partition_name == partition_name:
+                return partition
+        return None
