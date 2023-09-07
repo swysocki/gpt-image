@@ -54,3 +54,17 @@ def test_disk_info(new_image):
     assert disk_d["backup_header"]["backup"]
     assert disk_d["backup_header"]["header_size"] == 92
     assert len(disk_d["partitions"]) == 2
+
+
+def test_write_data(new_image):
+    disk = Disk.open(new_image)
+    part = disk.table.partitions.find("partition1")
+    count = part.write_data(disk, BYTE_DATA)
+    assert count == len(BYTE_DATA)
+
+    with open(str(new_image), "rb") as b:
+        start = part.first_lba * disk.sector_size
+        byte_count = len(BYTE_DATA)
+        b.seek(start)
+        test_buffer = b.read(byte_count)
+        assert test_buffer == BYTE_DATA

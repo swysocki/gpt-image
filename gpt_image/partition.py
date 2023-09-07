@@ -1,15 +1,21 @@
+from __future__ import annotations
+
 import json
 import struct
 import uuid
 from enum import Enum, IntEnum
 from math import ceil
 from typing import List, Optional
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # a bit of a hack to allow typing to work
+    from gpt_image.disk import Disk
 
 from gpt_image.geometry import Geometry
 
 
 class PartitionEntryError(Exception):
-    """Exception class for erros in partition entries"""
+    """Exception class for errors in partition entries"""
 
 
 class PartitionAttribute(IntEnum):
@@ -175,6 +181,25 @@ class Partition:
             bytes(self.partition_name, encoding="utf_16_le"),
         )
         return partition_bytes
+
+    def write_data(self, disk: Disk, data: bytes) -> int:
+        """Write bytes to partition
+
+        Args:
+            disk: GPT Disk instance
+            data: data in bytes
+        Returns:
+            integer of byte count written
+        Raises:
+            ValueError if byte count is too large for partition
+        """
+        if len(data) > self.size:
+            raise ValueError(f"data too large for partition: {len(data)} {self.size}")
+        with open(str(disk.image_path), "wb") as b:
+            start = self.first_lba * disk.sector_size
+            b.seek(start)
+            b.write(data)
+        return len(data)
 
     @staticmethod
     def unmarshal(partition_bytes: bytes, sector_size: int) -> "Partition":
