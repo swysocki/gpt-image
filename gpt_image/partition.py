@@ -195,7 +195,7 @@ class Partition:
         """
         if len(data) > self.size:
             raise ValueError(f"data too large for partition: {len(data)} {self.size}")
-        with open(str(disk.image_path), "wb") as b:
+        with open(str(disk.image_path), "r+b") as b:
             start = self.first_lba * disk.sector_size
             b.seek(start)
             b.write(data)

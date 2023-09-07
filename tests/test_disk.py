@@ -67,7 +67,7 @@ def test_write_data(new_image):
         byte_count = len(BYTE_DATA)
         b.seek(start)
         test_buffer = b.read(byte_count)
-        assert test_buffer == BYTE_DATA
+        assert bytes(test_buffer) == BYTE_DATA
 
 
 def test_read_partition(new_image):
@@ -75,4 +75,4 @@ def test_read_partition(new_image):
     part = disk.table.partitions.find("partition1")
     part.write_data(disk, BYTE_DATA)
     read_data = part.read(disk)
-    assert read_data == BYTE_DATA
+    assert read_data[:len(BYTE_DATA)] == BYTE_DATA
