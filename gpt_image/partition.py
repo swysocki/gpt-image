@@ -201,6 +201,20 @@ class Partition:
             b.write(data)
         return len(data)
 
+    def read(self, disk: Disk) -> bytearray:
+        """Read bytes from a given partition
+
+        Args:
+            disk: GPT Disk instance
+        Returns:
+            bytearray of partition data
+        """
+        with open(str(disk.image_path), "rb") as b:
+            start = self.first_lba * disk.sector_size
+            b.seek(start)
+            buffer = b.read(self.size)
+        return bytearray(buffer)
+
     @staticmethod
     def unmarshal(partition_bytes: bytes, sector_size: int) -> "Partition":
         """Create a Partition object from existing bytes
