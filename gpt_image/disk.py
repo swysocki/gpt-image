@@ -121,8 +121,6 @@ class Disk:
         with open(self.image_path, "r+b") as f:
             # zero entire disk
             f.write(b"\x00" * self.size)
-            f.seek(0)
-            f.write(self.table.protective_mbr.marshal())
         self.commit()
 
     def commit(self) -> None:
@@ -132,8 +130,16 @@ class Disk:
         this are not written to disk.
         """
 
+        # if partitions have been moved or resized,
+        # then their data needs to be shifted within the disk
+        self.table.partitions.commit(self)
+
         self.table.update()
         with open(self.image_path, "r+b") as f:
+            # write MBR
+            f.seek(0)
+            f.write(self.table.protective_mbr.marshal())
+
             # write primary header
             f.seek(self.geometry.primary_header_byte)
             f.write(self.table.primary_header.marshal())

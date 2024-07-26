@@ -69,3 +69,23 @@ def test_sfdisk(create_image):
     assert partitions[1].get("size") == (PART2_SIZE / 512)
     assert partitions[1].get("start") == 48
     assert partitions[1].get("uuid") == STATIC_UUID.upper()
+
+    disk_image = disk.Disk.open(create_image)
+    disk_image.table.partitions.remove(PART1_NAME)
+    disk_image.table.partitions.resize(PART2_NAME, PART1_SIZE)
+    disk_image.commit()
+
+    result = subprocess.run(
+        [sgdisk, "-v", create_image], capture_output=True, text=True
+    )
+    assert "no problems found" in (result.stdout).lower()
+    result = subprocess.run(
+        [sfdisk, "--json", create_image], capture_output=True, text=True
+    )
+    assert result.returncode == 0
+    part_info = json.loads(result.stdout)
+    partitions = part_info.get("partitiontable").get("partitions")
+
+    assert len(partitions) == 1
+    assert partitions[0].get("name") == PART2_NAME
+    assert partitions[0].get("size") == (PART1_SIZE / 512)
