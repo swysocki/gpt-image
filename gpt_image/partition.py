@@ -262,20 +262,27 @@ class Partition:
             return False
         return True
 
-    def commit(self, disk: Disk, tmpfile: Optional[IO[bytes]] = None) -> None:
+    def commit(self, disk: Disk, tmpfile: Optional[IO[bytes]] = None, chunk_size: Optional[int] = None) -> None:
+        max_size = min(self.size, self.size_staged)
+        start = disk.sector_size * self.first_lba_staged
+        count = 0
+        if chunk_size is None or chunk_size > max_size:
+            chunk_size = max_size
         if tmpfile is None:
             f: IO[bytes] = open(disk.image_path, 'r+b')
         else:
             f = tmpfile
         try:
-            max_size = min(self.size, self.size_staged)
-            data = self.read(disk, max_size=max_size)
-            start = disk.sector_size * self.first_lba_staged
-            self._write_data(f, start, bytes(data))
-            self._commit_attrs()
+            while count < max_size:
+                data = self.read(disk, max_size=chunk_size, offset=count)
+                if not data:
+                    break
+                count += len(data)
+                self._write_data(f, start + count, bytes(data))
         finally:
             if tmpfile is None:
                 f.close()
+        self._commit_attrs()
 
     def _write_data(self, image: IO[bytes], start_offset: int, data: bytes) -> int:
         image.seek(start_offset)
@@ -301,19 +308,20 @@ class Partition:
         with open(disk.image_path, 'r+b') as image:
             return self._write_data(image, start, data)
 
-    def read(self, disk: Disk, max_size: Optional[int] = None) -> bytearray:
+    def read(self, disk: Disk, max_size: Optional[int] = None, offset: int = 0) -> bytearray:
         """Read bytes from a given partition
 
         Args:
             disk: GPT Disk instance
             max_size: a maximum number of bytes to read (or None to read the entire partition)
+            offset: an offset (number of bytes) within the partition from which to read
         Returns:
             bytearray of partition data
         """
 
         with open(str(disk.image_path), "rb") as b:
-            start = disk.sector_size * self.first_lba
-            size = self.size
+            start = disk.sector_size * self.first_lba + offset
+            size = self.size - offset
             if max_size is not None:
                 size = min(size, max_size)
             b.seek(start)
