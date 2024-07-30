@@ -62,10 +62,8 @@ class Disk:
             disk.geometry.alternate_header_byte : disk.geometry.alternate_header_byte
             + disk.geometry.header_length
         ]
-        disk.table.primary_header = Header(disk.geometry)
-        disk.table.primary_header.unmarshal(primary_header_b, disk.geometry)
-        disk.table.secondary_header = Header(disk.geometry, is_backup=True)
-        disk.table.secondary_header.unmarshal(backup_header_b, disk.geometry)
+        disk.table.primary_header = Header.unmarshal(primary_header_b, disk.geometry)
+        disk.table.secondary_header = Header.unmarshal(backup_header_b, disk.geometry, is_backup=True)
         # read the partition tables
         primary_part_table_b = disk_bytes[
             disk.geometry.primary_array_byte : disk.geometry.primary_array_byte
@@ -133,7 +131,6 @@ class Disk:
         # if partitions have been moved or resized,
         # then their data needs to be shifted within the disk
         self.table.partitions.commit(self)
-
         self.table.update()
         with open(self.image_path, "r+b") as f:
             # write MBR

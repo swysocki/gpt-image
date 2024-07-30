@@ -158,7 +158,7 @@ class Header:
         return header_bytes + padding
 
     @staticmethod
-    def unmarshal(header_bytes: bytes, geometry: Geometry) -> "Header":
+    def unmarshal(header_bytes: bytes, geometry: Geometry, is_backup: bool = False) -> "Header":
         (
             signature,
             revision,
@@ -185,17 +185,21 @@ class Header:
         if header_size != Header._HEADER_SIZE:
             raise HeaderReadError("Invalid header size")
 
+        if is_backup:
+            my_lba, alternate_lba = alternate_lba, my_lba
         geometry.my_lba = my_lba
         geometry.alternate_lba = alternate_lba
         geometry.first_usable_lba = first_usable_lba
         geometry.last_usable_lba = last_usable_lba
         geometry.partition_entry_lba = partition_entry_lba
 
+        disk_guid = str(uuid.UUID(bytes=disk_guid))
         return Header(
             geometry,
             header_crc32,
             partition_entry_crc32,
             disk_guid,
+            is_backup=is_backup
         )
 
 
