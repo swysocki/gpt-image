@@ -277,8 +277,8 @@ class Partition:
                 data = self.read(disk, max_size=chunk_size, offset=count)
                 if not data:
                     break
-                count += len(data)
                 self._write_data(f, start + count, bytes(data))
+                count += len(data)
         finally:
             if tmpfile is None:
                 f.close()
