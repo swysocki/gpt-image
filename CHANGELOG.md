@@ -1,6 +1,22 @@
 # CHANGELOG
 
+## v0.9.1 (2025-03-19)
 
+### Fix
+
+* fix: Fix partition commit offset calculation
+
+## v0.9.0 (2024-07-30)
+
+### Feature
+
+* feat: support chunked commit writes
+
+* feat: support for deleting/resizing existing partitions
+
+### Fix
+
+fix: unmarshall existing headers when loading images
 
 ## v0.8.0 (2023-09-07)
 
