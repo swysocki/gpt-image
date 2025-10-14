@@ -115,11 +115,6 @@ class Disk:
         self.size = size
         self.geometry = Geometry(self.size, self.sector_size)
         self.table = Table(self.geometry)
-        # @TODO: move this into the write method
-        with open(self.image_path, "r+b") as f:
-            # zero entire disk
-            f.write(b"\x00" * self.size)
-        self.commit()
 
     def commit(self) -> None:
         """Commit the GPT information to disk
@@ -133,6 +128,10 @@ class Disk:
         self.table.partitions.commit(self)
         self.table.update()
         with open(self.image_path, "r+b") as f:
+            # zero entire disk
+            f.truncate(0)
+            f.truncate(self.size)
+
             # write MBR
             f.seek(0)
             f.write(self.table.protective_mbr.marshal())
